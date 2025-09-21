@@ -1,0 +1,27 @@
+# Dependencies
+# Ignore the massive folder of frontend packages
+node_modules/
+
+# Python
+# Ignore Python cache files and virtual environments
+__pycache__/
+*.pyc
+venv/
+.venv/
+
+# Secrets & Credentials
+# CRITICAL: Ignore all .json files to prevent leaking your Google Cloud keys
+*.json
+
+# Build output
+dist/
+build/
+
+# Environment variables
+# Never commit environment variables
+.env
+.env.local
+
+# Operating System files
+.DS_Store
+Thumbs.db

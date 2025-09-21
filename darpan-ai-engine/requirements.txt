@@ -1,0 +1,6 @@
+Flask
+Flask-Cors
+gunicorn
+vertexai
+google-cloud-aiplatform
+google-cloud-discoveryengine
