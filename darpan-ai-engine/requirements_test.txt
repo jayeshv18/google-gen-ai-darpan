@@ -1,0 +1,3 @@
+vertexai>=1.38
+Flask>=3.0 # Still needed for basic Cloud Run deployment
+gunicorn>=21.0

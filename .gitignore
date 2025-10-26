@@ -25,3 +25,39 @@ build/
 # Operating System files
 .DS_Store
 Thumbs.db
+# Node
+node_modules/
+.next/
+dist/
+build/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+*.egg-info/
+*.log
+
+# Secrets & local configs
+.env
+.env.*
+*.key
+*.json
+*.yaml
+config.json
+credentials.json
+
+# Generated files
+*.pdf
+*.png
+*.jpg
+*.jpeg
+
+# IDE
+.vscode/
+.idea/
+.DS_Store

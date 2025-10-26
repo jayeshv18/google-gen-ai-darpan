@@ -1,0 +1,19 @@
+# FastAPI server
+fastapi==0.95.2
+uvicorn[standard]==0.22.0
+python-multipart==0.0.6
+gunicorn
+
+# Forensic tools
+python-magic==0.4.27
+imagehash==4.3.1
+
+# Reporting
+reportlab==4.1.0
+pydantic==1.10.11
+
+# Image/Data Analysis (from scatter_analysis.py)
+numpy
+matplotlib
+opencv-python-headless
+Pillow==10.0.1

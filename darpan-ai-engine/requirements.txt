@@ -1,6 +1,16 @@
-Flask
-Flask-Cors
-gunicorn
-vertexai
-google-cloud-aiplatform
-google-cloud-discoveryengine
+Flask>=3.0
+Flask-Cors>=4.0
+gunicorn>=21.0
+
+# Google Cloud and Vertex AI
+google-cloud-aiplatform>=1.38
+google-auth>=2.14
+google-api-python-client>=2.80
+vertexai>=1.38
+
+# File handling / media analysis
+python-magic>=0.4.27
+Pillow>=10.0        # Image processing
+pydub>=0.25.1       # Audio analysis helper
+# provenance-library-placeholder # Replace with actual library later (e.g., c2pa, exifread)
+requests
