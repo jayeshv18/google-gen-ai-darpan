@@ -15,7 +15,7 @@ from datetime import datetime # For Report Payload
 from text_forensic import analyze_text_forensics
 
 # --- CONFIGURATION ---
-GOOGLE_API_KEY = "AIzaSyCd7b1x_JZPnHUfeD37XGjlONVFRkaFWSo" # Replace if needed
+GOOGLE_API_KEY = "" # Replace if needed
 SEARCH_ENGINE_ID = "8428b10238cc84bdb" # Replace if needed
 PROJECT_ID = "darpan-project"
 LOCATION = "us-central1"
