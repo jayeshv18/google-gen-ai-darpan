@@ -17,6 +17,11 @@ import React, { useState, useEffect } from "react";
 // Check for browser support just once
 const isSpeechSynthesisSupported = !!window.speechSynthesis;
 
+// Define MEDIA_API_ENDPOINT here or import it if defined elsewhere
+// This is needed for the handleReport function
+const MEDIA_API_ENDPOINT = 'https://darpan-backend-service-361059167059.us-central1.run.app/analyze-media';
+
+
 interface ChatMessageProps extends Message {
   isLastMessage?: boolean;
 }
@@ -37,7 +42,7 @@ const getFactorSentimentStyles = (sentiment?: string) => {
   }
 };
 
-export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }: ChatMessageProps) => { // Added imageUrl prop
+export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }: ChatMessageProps) => {
   const { toast } = useToast();
   const [isSpeaking, setIsSpeaking] = useState(false);
 
@@ -79,13 +84,10 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
   // Render content with links and line breaks
   const renderContent = () => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
-    // Replace standalone URLs first
     const contentWithLinks = content?.replace(urlRegex, (url) => {
-      // Avoid replacing URLs already inside <a> tags (simple check)
       if (content?.includes(`href="${url}"`)) return url;
       return `<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-indigo-400 hover:underline break-all">${url}</a>`;
     }) || "";
-    // Then replace newlines
     return contentWithLinks.replace(/\n/g, '<br />');
   }
 
@@ -107,6 +109,11 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
   // Report handler (calls the backend endpoint)
   const handleReport = async (reportPayload: any) => {
     console.log("--- Reporting Misinformation ---");
+    // Ensure MEDIA_API_ENDPOINT is defined correctly
+    if (!MEDIA_API_ENDPOINT) {
+        toast({ title: "Configuration Error", description: "API endpoint not set.", variant: "destructive" });
+        return;
+    }
     const reportEndpoint = MEDIA_API_ENDPOINT.replace('/analyze-media', '/report-misinformation');
 
     try {
@@ -141,7 +148,6 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
     return (
       <div className="flex items-start gap-4 justify-end mb-6 animate-slide-in">
         <div className="max-w-xl lg:max-w-2xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white p-4 rounded-lg rounded-tr-none shadow-md">
-          {/* --- Image Preview Added Here --- */}
           {imageUrl && (
             <img
               src={imageUrl}
@@ -149,7 +155,6 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
               className="max-w-full h-auto max-h-48 rounded-md mb-2 border border-indigo-300/50"
             />
           )}
-          {/* --- End Image Preview --- */}
           {content && <p className="text-sm" dangerouslySetInnerHTML={{ __html: renderContent() }}></p>}
         </div>
         <Avatar className="w-8 h-8 flex-shrink-0 border-2 border-indigo-500">
@@ -173,7 +178,7 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
           id={isLastMessage ? 'darpan-report-to-export' : undefined}
           className="max-w-xl lg:max-w-2xl w-full bg-zinc-800 border border-zinc-700 p-4 rounded-lg rounded-tl-none shadow-lg"
         >
-          {/* Header Area (with Speaker Button) */}
+          {/* Header Area */}
           <div className="flex justify-between items-start mb-3">
               <h3 className="font-bold text-white text-md">Trust Compass Report</h3>
               {isSpeechSynthesisSupported && (
@@ -202,10 +207,10 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
              <p className="text-sm text-zinc-300 whitespace-pre-wrap">{analysis.analysis}</p>
           </div>
 
-          {/* C.O.N.T.E.X.T. Section (Uses 3 columns) */}
+          {/* C.O.N.T.E.X.T. Section */}
           <div className="border-t border-zinc-700 pt-4">
             <h4 className="text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">Darpan C.O.N.T.E.X.T. Analysis</h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2"> {/* 3 Columns */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {analysis.factors.map((factor, index) => {
                 const sentimentStyles = getFactorSentimentStyles(factor.sentiment);
                 return (
@@ -221,9 +226,44 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
                 );
               })}
             </div>
-          </div>
+          </div> {/* End C.O.N.T.E.X.T. Section */}
 
-          {/* Interactivity Buttons Section (Includes Report Button) */}
+          {/* --- *** NEW: Text Forensics Summary *** --- */}
+          {analysis.text_forensics && !analysis.text_forensics.error && (
+            <div className="mt-4 pt-4 border-t border-zinc-700">
+              <h4 className="text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wider">
+                🧠 Text Forensics Summary
+              </h4>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
+                <span className="text-zinc-400">AI Likelihood (Heuristic):</span>
+                <span className="text-white font-medium">{analysis.text_forensics.ai_likelihood_heuristic?.toFixed(2)}</span>
+
+                <span className="text-zinc-400">Readability (Flesch):</span>
+                <span className="text-white font-medium">{analysis.text_forensics.readability_score_flesch?.toFixed(1)}</span>
+
+                <span className="text-zinc-400">Sentiment Polarity:</span>
+                <span className="text-white font-medium">{analysis.text_forensics.sentiment_polarity?.toFixed(2)}</span>
+
+                <span className="text-zinc-400">Subjectivity:</span>
+                <span className="text-white font-medium">{analysis.text_forensics.subjectivity?.toFixed(2)}</span>
+
+                {/* Add others if desired, e.g., diversity, repetition */}
+                 <span className="text-zinc-400">Lexical Diversity (TTR):</span>
+                <span className="text-white font-medium">{analysis.text_forensics.lexical_diversity_ttr?.toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+          {analysis.text_forensics?.error && (
+             <div className="mt-4 pt-4 border-t border-zinc-700">
+               <h4 className="text-xs font-semibold text-red-400 mb-2 uppercase tracking-wider">
+                 ⚠️ Text Forensics Error
+               </h4>
+                <p className="text-sm text-red-300">{analysis.text_forensics.error}</p>
+             </div>
+          )}
+          {/* --- *** END NEW SECTION *** --- */}
+
+          {/* --- Interactivity Buttons Section (Starts here) --- */}
           <div className="mt-4 pt-4 border-t border-zinc-700 flex items-center justify-end gap-2">
              <span className="text-xs text-zinc-500 mr-auto">Was this analysis helpful?</span>
              {/* Feedback */}
@@ -237,7 +277,8 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
                     <ShieldAlert size={16} />
                 </Button>
              )}
-          </div>
+          </div> {/* End Interactivity Buttons */}
+
 
           {/* Learn More Section */}
           {analysis.learn_more && (
@@ -261,13 +302,14 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
                  </div>
                )}
              </div>
-          )}
-        </div>
-      </div>
-    );
-  }
+          )} {/* End Learn More */}
 
-  // --- FALLBACK FOR SIMPLE TEXT ASSISTANT MESSAGES (like welcome message) ---
+        </div> {/* End Main Content Div */}
+      </div> // End Flex Row Div
+    ); // End Return
+  } // End if(role === 'assistant' && analysis)
+
+  // --- FALLBACK FOR SIMPLE TEXT ASSISTANT MESSAGES ---
   if (role === 'assistant' && content) {
     return (
       <div className="flex items-start gap-4 mb-6 animate-slide-in">
@@ -281,5 +323,5 @@ export const ChatMessage = ({ role, content, imageUrl, analysis, isLastMessage }
     )
   }
 
-  return null; // Should not happen in normal flow
+  return null; // Should not happen
 };

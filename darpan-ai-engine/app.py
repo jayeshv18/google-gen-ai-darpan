@@ -12,9 +12,10 @@ from vertexai.language_models import TextEmbeddingModel
 from google.cloud import aiplatform
 from googleapiclient.discovery import build # For Web Search
 from datetime import datetime # For Report Payload
+from text_forensic import analyze_text_forensics
 
 # --- CONFIGURATION ---
-GOOGLE_API_KEY = "" # Replace if needed
+GOOGLE_API_KEY = "AIzaSyCd7b1x_JZPnHUfeD37XGjlONVFRkaFWSo" # Replace if needed
 SEARCH_ENGINE_ID = "8428b10238cc84bdb" # Replace if needed
 PROJECT_ID = "darpan-project"
 LOCATION = "us-central1"
@@ -141,18 +142,25 @@ def analyze_content():
         return jsonify({"error": "AI Service components not available."}), 500
 
     try:
+        # --- GET USER QUERY (RUNS ONCE) ---
         data = request.get_json()
-        user_query = data.get('query') # <-- Frontend sends 'query'
+        user_query = data.get('query')
         if not user_query: return jsonify({"error": "Query not provided"}), 400
-        
-        print(f"--- /analyze: Received Query: {user_query[:100]}... ---")
+
+        # --- CALL TEXT FORENSICS (RUNS ONCE) ---
+        print(f"--- /analyze: Performing text forensic analysis for query: {user_query[:50]}... ---")
+        text_forensic_results = analyze_text_forensics(user_query)
+        print(f"--- /analyze: Text forensic results: {text_forensic_results} ---")
+
+        # --- CALL WEB SEARCH & RAG (RUNS ONCE) ---
+        print(f"--- /analyze: Performing RAG/Web searches ---")
         web_results = google_search(user_query)
         rag_results = vector_search(user_query)
         print("--- /analyze: RAG/Web search lookups completed ---")
 
         # The enhanced prompt for text
         prompt = f"""
-        Act as a "Trust Analysis" engine. Analyze the User's Text for misinformation, credibility, bias, and manipulation based *strictly* on the provided context (Web Search Results, Trusted Database Results). Do not use external knowledge.
+        Act as a "Trust Analysis" engine. Analyze the User's Text for misinformation, credibility, bias, and manipulation based *strictly* on the provided context (Web Search Results, Trusted Database Results **and Text Forensics Context**). Do not use external knowledge.
 
         Your response MUST be a single, valid JSON object with NO other text before or after it. The JSON object must have the exact top-level keys: "score", "analysis", "factors", and "learn_more".
 
@@ -189,6 +197,9 @@ def analyze_content():
         ---
         {rag_results}
         ---
+        **Text Forensics Context:** ---
+        {json.dumps(text_forensic_results, indent=2)}
+        ---
         Return ONLY the raw JSON object. Ensure all fields are populated according to these instructions.
         """
 
@@ -210,12 +221,18 @@ def analyze_content():
 
         try:
             report_data = json.loads(response_text)
+            # --- Validation ---
             if not all(k in report_data for k in ["score", "analysis", "factors", "learn_more"]):
                 raise ValueError("JSON missing required keys (score, analysis, factors, learn_more)")
             if not isinstance(report_data["factors"], list) or len(report_data["factors"]) != 6:
                  raise ValueError("Factors array is invalid (expected 6)")
-            
+
+            # --- ADD FORENSIC DATA TO RESPONSE ---
+            report_data["text_forensics"] = text_forensic_results
+
+            # --- RETURN ---
             return jsonify(report_data), 200
+
         except (json.JSONDecodeError, ValueError) as json_err:
              print(f"!!! /analyze: JSON Parsing/Validation Error - {json_err} !!! Raw text: {response_text}")
              return jsonify({"error": f"AI model returned invalid format: {json_err}", "raw_response": response_text}), 500

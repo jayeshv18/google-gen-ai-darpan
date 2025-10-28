@@ -14,3 +14,6 @@ Pillow>=10.0        # Image processing
 pydub>=0.25.1       # Audio analysis helper
 # provenance-library-placeholder # Replace with actual library later (e.g., c2pa, exifread)
 requests
+nltk
+textstat
+textblob
