@@ -30,6 +30,14 @@ import numpy as np
 from PIL import Image
 from google.cloud import storage
 
+# --- CONFIGURATION ---
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyCd7b1x_JZPnHUfeD37XGjlONVFRkaFWSo") # Restored from your previous code
+SEARCH_ENGINE_ID = os.environ.get("SEARCH_ENGINE_ID", "8428b10238cc84bdb")
+PROJECT_ID = os.environ.get("PROJECT_ID", "darpan-project")
+LOCATION = os.environ.get("LOCATION", "us-central1")
+MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.5-flash")
+
+
 # Silence TF logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
@@ -762,4 +770,10 @@ def health_check():
 # Run
 # ---------------------------
 if __name__ == '__main__':
+<<<<<<< HEAD
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=False)
+=======
+    port = int(os.environ.get("PORT", 8080))
+    print(f"--- Starting Flask Server for Gunicorn on port {port} in {LOCATION} with {MODEL_ID} ---")
+    app.run(debug=False, host='0.0.0.0', port=port)
+>>>>>>> e900b6c91c892cb9896f1244efaf19fb0b2d2722
