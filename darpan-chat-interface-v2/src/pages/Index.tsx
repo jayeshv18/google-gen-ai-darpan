@@ -10,11 +10,12 @@ import jsPDF from 'jspdf';
 import { HistorySidebar, HistoryItem } from "@/components/HistorySidebar";
 import { v4 as uuidv4 } from 'uuid';
 import { useTranslation } from 'react-i18next';
+
+// --- 1. IMPORT ALL YOUR FONTS ---
 import { hindiFontBase64 } from '../assets/fonts/hindiFontData';
-// --- Add your other font imports here when ready ---
-// import { tamilFontBase64 } from '../assets/fonts/tamilFontData';
-// import { bengaliFontBase64 } from '../assets/fonts/bengaliFontData';
-// import { kannadaFontBase64 } from '../assets/fonts/kannadaFontData';
+import { tamilFontBase64 } from '../assets/fonts/tamilFontData';
+import { bengaliFontBase64 } from '../assets/fonts/bengaliFontData';
+import { kannadaFontBase64 } from '../assets/fonts/kannadaFontData';
 
 
 // --- Interface Definitions (Unchanged) ---
@@ -31,7 +32,6 @@ export interface Analysis {
     rag_hits: any;
     web_hits: any;
     provenance_report?: any;
-    // --- THIS IS WHERE YOUR DATA LIVES ---
     forensic_report?: {
       scatter_analysis?: {
         entropies: any;
@@ -76,6 +76,8 @@ const Index = () => {
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // --- All functions from useEffect to handleReset are unchanged ---
+  
   // Load History
   useEffect(() => {
     try {
@@ -228,7 +230,7 @@ const Index = () => {
    };
 
 
-   // --- PDF EXPORT FUNCTION (UPDATED) ---
+   // --- PDF EXPORT FUNCTION (FULLY FIXED) ---
    const handleExport = (analysis: Analysis | null) => {
     if (!analysis) {
         toast({ title: t('toast.noReportSelected'), description: t('toast.noReportSelectedDesc'), variant: "destructive" });
@@ -248,31 +250,38 @@ const Index = () => {
       let y = margin;
       const reportLang = i18n.language.split('-')[0];
 
-      // --- Font Registration (Add your other fonts here) ---
+      // --- 2. REGISTER ALL YOUR FONTS ---
       let fontWarningShown = false;
       try {
+          // Hindi / Marathi
           doc.addFileToVFS("NotoSansDevanagari-Regular.ttf", hindiFontBase64);
           doc.addFont("NotoSansDevanagari-Regular.ttf", "NotoSansDevanagari", "normal");
           
-          // --- TODO: Add your other fonts here ---
-          // doc.addFileToVFS("NotoSansTamil-Regular.ttf", tamilFontBase64);
-          // doc.addFont("NotoSansTamil-Regular.ttf", "NotoSansTamil", "normal");
-          // doc.addFileToVFS("NotoSansBengali-Regular.ttf", bengaliFontBase64);
-          // doc.addFont("NotoSansBengali-Regular.ttf", "NotoSansBengali", "normal");
-          // doc.addFileToVFS("NotoSansKannada-Regular.ttf", kannadaFontBase64);
-          // doc.addFont("NotoSansKannada-Regular.ttf", "NotoSansKannada", "normal");
+          // Tamil
+          doc.addFileToVFS("NotoSansTamil-Regular.ttf", tamilFontBase64);
+          doc.addFont("NotoSansTamil-Regular.ttf", "NotoSansTamil", "normal");
 
-          console.log("Registered PDF fonts.");
+          // Bengali
+          doc.addFileToVFS("NotoSansBengali-Regular.ttf", bengaliFontBase64);
+          doc.addFont("NotoSansBengali-Regular.ttf", "NotoSansBengali", "normal");
+
+          // Kannada
+          doc.addFileToVFS("NotoSansKannada-Regular.ttf", kannadaFontBase64);
+          doc.addFont("NotoSansKannada-Regular.ttf", "NotoSansKannada", "normal");
+
+          console.log("Registered all PDF fonts.");
       } catch (fontError) {
-          console.error("Error registering Hindi font:", fontError);
+          console.error("Error registering custom fonts:", fontError);
           fontWarningShown = true; // Show warning for any font error
       }
 
-      // --- Correct Font Setter Function ---
+      // --- 3. FULLY CORRECTED FONT SETTER ---
       const setDocFont = (style: 'normal' | 'bold' = 'normal') => {
           let fontName = 'helvetica'; // Default
           let effectiveStyle = style;
 
+          // We set 'normal' for all custom fonts because jsPDF
+          // doesn't handle bold/italic well with custom .ttf files.
           switch (reportLang) {
               case 'hi':
               case 'mr':
@@ -280,16 +289,16 @@ const Index = () => {
                   effectiveStyle = 'normal';
                   break;
               case 'ta':
-                  // fontName = 'NotoSansTamil'; // Uncomment when added
-                  // effectiveStyle = 'normal';
+                  fontName = 'NotoSansTamil';
+                  effectiveStyle = 'normal';
                   break;
               case 'bn':
-                  // fontName = 'NotoSansBengali'; // Uncomment when added
-                  // effectiveStyle = 'normal';
+                  fontName = 'NotoSansBengali';
+                  effectiveStyle = 'normal';
                   break;
               case 'kn':
-                  // fontName = 'NotoSansKannada'; // Uncomment when added
-                  // effectiveStyle = 'normal';
+                  fontName = 'NotoSansKannada';
+                  effectiveStyle = 'normal';
                   break;
               default:
                   fontName = 'helvetica';
@@ -307,7 +316,7 @@ const Index = () => {
           }
       };
 
-      // PDF Helper Functions
+      // PDF Helper Functions (Unchanged)
       const addWatermark = () => {
          const totalPages = doc.getNumberOfPages();
          for (let i = 1; i <= totalPages; i++) {
@@ -370,7 +379,7 @@ const Index = () => {
         y += spaceNeeded;
       };
 
-      // --- START BUILDING PDF ---
+      // --- START BUILDING PDF (Unchanged) ---
       addSectionTitle(t('pdf.section.caseDetails'));
       
       const fileNameDisplay = reportPayload?.provenance_report?.file_name ?? (textForensics ? t('pdf.textInput') : 'N/A');
@@ -408,7 +417,7 @@ const Index = () => {
           y += 5;
       }
       
-      // --- (NEW!) SCATTER PLOT SECTION ---
+      // --- SCATTER PLOT SECTION (Unchanged) ---
       if (isMediaReport && reportPayload?.forensic_report?.scatter_analysis) {
           const scatter_data = reportPayload.forensic_report.scatter_analysis;
           const scatter_image_b64 = scatter_data.scatter_image_base64;
@@ -431,22 +440,19 @@ const Index = () => {
           if (scatter_image_b64) {
               try {
                   const imgData = "data:image/png;base64," + scatter_image_b64;
-                  // Aspect ratio from scatter_analysis.py is (9, 3) -> 3:1
-                  const imgWidth = 150; // in mm
-                  const imgHeight = 50; // 150 / 3
-                  
-                  checkPageBreak(imgHeight + 10); // Check if we have space
-                  
+                  const imgWidth = 150;
+                  const imgHeight = 50;
+                  checkPageBreak(imgHeight + 10);
                   doc.addImage(imgData, 'PNG', margin, y, imgWidth, imgHeight);
-                  y += imgHeight + 10; // Add space after image
+                  y += imgHeight + 10;
               } catch (e) {
                   console.error("Failed to add scatter plot image to PDF:", e);
                   addBodyText(`(Failed to render scatter image)`, margin, 9, 'normal');
               }
           }
       }
-      // --- (END NEW SECTION) ---
       
+      // --- DIGITAL PROVENANCE SECTION (Unchanged) ---
       if (isMediaReport && reportPayload?.provenance_report) {
            addSectionTitle(t('pdf.section.digitalProvenance'));
            const prov = reportPayload.provenance_report;
@@ -477,7 +483,7 @@ const Index = () => {
            }
       }
 
-      addWatermark(); // Add watermark at the end
+      addWatermark();
 
       const caseIdForFile = (analysis.caseId || 'report').replace(/[^a-zA-Z0-9-]/g, '_');
       const pdfFileName = `darpan-report-${caseIdForFile}.pdf`;
@@ -498,6 +504,7 @@ const Index = () => {
      toast({ title: t('toast.languageChanged'), description: t('toast.languageChangedDesc', { lng }) });
    };
 
+  // --- RETURN STATEMENT (Unchanged) ---
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Hero />
@@ -600,8 +607,8 @@ const Index = () => {
           <div className="sticky bottom-0 py-4 bg-background/95 backdrop-blur-sm border-t border-border/50 flex-shrink-0">
             <ChatInput onSend={handleSend} isLoading={isLoading} />
           </div>
-        </div> {/* End Main Chat Area */}
-      </div> {/* End Page Layout */}
+        </div>
+      </div>
     </div>
   );
 };
