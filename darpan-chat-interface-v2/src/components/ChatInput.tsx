@@ -1,141 +1,231 @@
 // src/components/ChatInput.tsx
+import { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Paperclip, Send, Loader2, Sparkles, Mic, MicOff } from 'lucide-react'; // Import Mic and MicOff
+import { useToast } from '@/hooks/use-toast';
+import { useTranslation } from 'react-i18next';
 
-import React, { useState, useRef, ChangeEvent, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Card } from "@/components/ui/card";
-import { Send, Loader2, Mic, Image as ImageIcon, X, MicOff } from "lucide-react";
-
-// Check for browser support just once
-const isSpeechRecognitionSupported = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-if (!isSpeechRecognitionSupported) {
-  console.error("Speech Recognition not supported by this browser.");
-}
+// --- Check for SpeechRecognition API ---
+const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+const isSpeechRecognitionSupported = !!SpeechRecognition;
 
 interface ChatInputProps {
-  // --- *** Updated onSend signature to include imagePreviewUrl *** ---
-  onSend: (text: string, file: File | null, imagePreviewUrl: string | null) => void;
-  // -----------------------------------------------------------------
+  onSend: (content: string, file: File | null, imagePreviewUrl: string | null) => void;
   isLoading: boolean;
 }
 
-export const ChatInput = ({ onSend, isLoading }: ChatInputProps) => {
-  const [inputContent, setInputContent] = useState('');
-  const [imagePreview, setImagePreview] = useState<string | null>(null); // This holds the base64 URL for preview
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+const thinkingMessages = [
+  "thinking.analyzing",
+  "thinking.forensics",
+  "thinking.provenance",
+  "thinking.ml",
+  "thinking.synthesizing"
+];
 
-  // --- Voice Input Logic (No changes needed here) ---
+export const ChatInput = ({ onSend, isLoading }: ChatInputProps) => {
+  const [content, setContent] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const { t, i18n } = useTranslation();
+  
+  // --- NEW: MIC & THOUGHTFUL LOADING STATES ---
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any | null>(null); // SpeechRecognition instance
+  const [thinkingMessage, setThinkingMessage] = useState(thinkingMessages[0]);
+  const [messageIndex, setMessageIndex] = useState(0);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Thoughtful Loading Effect
   useEffect(() => {
-    if (!isSpeechRecognitionSupported) return;
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    recognitionRef.current = new SpeechRecognition();
-    const recognition = recognitionRef.current;
-    recognition.continuous = false;
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.onstart = () => setIsListening(true);
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      setInputContent(prev => prev ? prev + ' ' + transcript : transcript);
+    if (isLoading) {
+      setMessageIndex(0);
+      setThinkingMessage(thinkingMessages[0]);
+      intervalRef.current = setInterval(() => {
+        setMessageIndex(prevIndex => {
+          const nextIndex = (prevIndex + 1) % thinkingMessages.length;
+          setThinkingMessage(thinkingMessages[nextIndex]);
+          return nextIndex;
+        });
+      }, 3000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
     };
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error('Speech recognition error:', event.error);
-      setIsListening(false);
+  }, [isLoading]);
+
+  // Cleanup mic on unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
     };
-     recognition.onend = () => setIsListening(false);
-    return () => { recognitionRef.current?.abort(); };
   }, []);
 
-  const handleListen = () => {
-    if (!recognitionRef.current) return;
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      try { recognitionRef.current.start(); }
-      catch (error) { console.error("Error starting recognition:", error); setIsListening(false); }
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) {
+      if (selectedFile.size > 10 * 1024 * 1024) { // 10MB limit
+        toast({ title: t('toast.fileTooLarge'), description: t('toast.fileTooLargeDesc'), variant: 'destructive' });
+        return;
+      }
+      setFile(selectedFile);
+      const previewUrl = URL.createObjectURL(selectedFile);
+      setImagePreviewUrl(previewUrl);
     }
   };
-  // --- End Voice Input Logic ---
 
-  // --- Image Handling (No changes needed here) ---
-  const handleImageSelect = (event: ChangeEvent<HTMLInputElement>) => {
-     const file = event.target.files?.[0];
-     if (file && file.type.startsWith('image/')) {
-       setImageFile(file);
-       const reader = new FileReader();
-       reader.onloadend = () => { setImagePreview(reader.result as string); }; // Store preview URL
-       reader.readAsDataURL(file);
-     } else { clearImage(); }
-      if(fileInputRef.current) { fileInputRef.current.value = ""; }
+  const handleTriggerFile = () => {
+    fileInputRef.current?.click();
   };
 
-  const clearImage = () => {
-     setImagePreview(null);
-     setImageFile(null);
-     if (fileInputRef.current) { fileInputRef.current.value = ""; }
-  };
-  // --- End Image Handling ---
+  // --- NEW: FUNCTIONAL MICROPHONE HANDLER ---
+  const handleMicClick = () => {
+    if (!isSpeechRecognitionSupported) {
+      toast({ title: t('toast.micNotSupported'), description: t('toast.micNotSupportedDesc'), variant: 'destructive' });
+      return;
+    }
 
-  // --- *** CORRECTED handleSubmit *** ---
-  const handleSubmit = () => {
-    const trimmedContent = inputContent.trim();
-    if (isLoading || (!trimmedContent && !imageFile)) { return; }
-    // Pass the imagePreview state variable as the third argument
-    onSend(trimmedContent, imageFile, imagePreview);
-    setInputContent('');
-    clearImage();
-  };
-  // --- *** END CORRECTION *** ---
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); }
+    const recognition = new SpeechRecognition();
+    recognition.lang = i18n.language; // Use current language
+    recognition.interimResults = true;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      toast({ title: t('toast.listening'), description: t('toast.micListeningDesc') });
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      setIsListening(false);
+      toast({ title: t('toast.micError'), description: event.error, variant: 'destructive' });
+    };
+
+    recognition.onresult = (event: any) => {
+      const transcript = Array.from(event.results)
+        .map((result: any) => result[0])
+        .map((result) => result.transcript)
+        .join('');
+      
+      setContent(transcript); // Update textarea with live transcript
+    };
+
+    recognition.start();
+  };
+  // --- END MIC HANDLER ---
+
+  const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
+    if (!content.trim() && !file) return;
+    onSend(content, file, imagePreviewUrl);
+    setContent('');
+    setFile(null);
+    setImagePreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit();
+    }
   };
 
   return (
-    <Card className="border-primary/20 bg-card/95 backdrop-blur-sm shadow-elegant p-3">
-      {/* Hidden file input */}
-      <input type="file" ref={fileInputRef} onChange={handleImageSelect} accept="image/*" style={{ display: 'none' }} />
-
-      {/* Image Preview Area */}
-      {imagePreview && (
-          <div className="relative mb-2 w-24 h-24 border border-border/50 rounded-md overflow-hidden">
-              <img src={imagePreview} alt="Selected preview" className="w-full h-full object-cover" />
-              <Button size="icon" variant="ghost" className="absolute top-1 right-1 h-6 w-6 bg-background/50 hover:bg-destructive/80 hover:text-destructive-foreground rounded-full p-1" onClick={clearImage} disabled={isLoading} title="Remove image"> <X className="w-4 h-4" /> </Button>
-          </div>
-      )}
-
-      <div className="flex items-end gap-2">
+    <div className="relative"> 
+      <form onSubmit={handleSubmit} className="flex items-start gap-3">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          className="hidden"
+          accept="image/png, image/jpeg, image/webp"
+        />
+        <Button
+          type="button"
+          variant={file ? "secondary" : "ghost"}
+          size="icon"
+          onClick={handleTriggerFile}
+          disabled={isLoading}
+          className={`flex-shrink-0 ${file ? 'border-2 border-indigo-500' : ''}`}
+          title={t('chat.attachImage')}
+        >
+          <Paperclip className="w-5 h-5" />
+        </Button>
         <div className="flex-1 relative">
           <Textarea
-            placeholder="Type text, paste URL, attach an image, or use mic..."
-            value={inputContent}
-            onChange={(e) => setInputContent(e.target.value)}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="min-h-[48px] max-h-[120px] bg-input border-border/50 focus:border-primary resize-none pr-24"
+            placeholder={t('chat.placeholder')}
+            className="pr-24 min-h-[52px] resize-none" // Increased padding for 2 buttons
             disabled={isLoading}
-            rows={1}
           />
-          <div className="absolute right-2 bottom-2 flex items-center gap-1">
-            {/* Image Upload Button */}
-            <Button size="icon" variant="ghost" className={`h-8 w-8 hover:bg-primary/10 hover:text-primary p-1 ${imageFile ? 'text-primary' : ''}`} onClick={() => fileInputRef.current?.click()} disabled={isLoading} type="button" title="Attach image"> <ImageIcon className="w-4 h-4" /> </Button>
-
-            {/* Mic Button */}
-            {isSpeechRecognitionSupported ? (
-              <Button size="icon" variant="ghost" className={`h-8 w-8 hover:bg-primary/10 p-1 ${isListening ? 'text-red-500 animate-pulse' : 'hover:text-primary'}`} onClick={handleListen} disabled={isLoading} type="button" title={isListening ? "Stop listening" : "Start voice input"}>
-                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-              </Button>
-            ) : ( <Button size="icon" variant="ghost" className="h-8 w-8 opacity-30 cursor-not-allowed p-1" disabled title="Voice input not supported"> <Mic className="w-4 h-4" /> </Button> )}
+          {/* --- FIX: Mic Button --- */}
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            disabled={isLoading}
+            onClick={handleMicClick} 
+            className={`absolute right-[52px] top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground ${isListening ? 'text-red-500 animate-pulse' : ''}`}
+            title="Voice input"
+          >
+            {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </Button>
+          {/* --- END FIX --- */}
+          <Button
+            type="submit"
+            size="icon"
+            disabled={isLoading || (!content.trim() && !file)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 h-8 w-8"
+          >
+            {isLoading ? (
+              <div className="flex items-center justify-center animate-pulse">
+                <Sparkles className="w-4 h-4" />
+              </div>
+            ) : (
+              <Send className="w-4 h-4" />
+            )}
+          </Button>
+          {imagePreviewUrl && (
+            <div className="absolute bottom-full left-0 mb-2 p-1.5 bg-background border rounded-lg shadow-lg">
+              <img src={imagePreviewUrl} alt="Preview" className="h-24 w-auto rounded" />
+            </div>
+          )}
+        </div>
+      </form>
+      
+      {isLoading && (
+        <div className="absolute bottom-full left-0 right-0 mb-2 flex justify-center">
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-background p-2 rounded-lg border shadow-lg">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <p className="animate-pulse">{t(thinkingMessage)}</p>
           </div>
         </div>
-
-        {/* Send Button */}
-        <Button onClick={handleSubmit} disabled={isLoading || (!inputContent.trim() && !imageFile)} className="h-12 px-4 bg-gradient-primary hover:shadow-glow transition-all">
-          {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" /> }
-        </Button>
-      </div>
-    </Card>
+      )}
+    </div>
   );
 };

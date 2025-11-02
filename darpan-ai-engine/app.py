@@ -3,431 +3,763 @@ import time
 import json
 import magic
 import traceback
-import requests  # For calling the forensic service
+import requests
 import vertexai
-from vertexai.generative_models import GenerativeModel, Part
+import io
+import hashlib
+from concurrent.futures import ThreadPoolExecutor
+from google.cloud import firestore
+from google.cloud import translate_v2 as translate
+from vertexai.generative_models import GenerativeModel
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from vertexai.language_models import TextEmbeddingModel
 from google.cloud import aiplatform
 from googleapiclient.discovery import build # For Web Search
-from datetime import datetime # For Report Payload
+from datetime import datetime
 from text_forensic import analyze_text_forensics
+from google.cloud import vision
+import exifread
 
-# --- CONFIGURATION ---
-GOOGLE_API_KEY = "AIzaSyCd7b1x_JZPnHUfeD37XGjlONVFRkaFWSo" # Replace if needed
-SEARCH_ENGINE_ID = "8428b10238cc84bdb" # Replace if needed
-PROJECT_ID = "darpan-project"
-LOCATION = "us-central1"
-MODEL_ID = "gemini-2.5-flash" # The model that worked!
+# ML model imports
+import tensorflow as tf
+from tensorflow.keras import layers, models
+from tensorflow.keras.applications import EfficientNetB0
+from tensorflow.keras.optimizers import Adam
+import numpy as np
+from PIL import Image
+from google.cloud import storage
 
-# --- RAG Endpoint Config ---
-RAG_INDEX_ENDPOINT_ID = "5271518339418554368"
-RAG_DEPLOYED_INDEX_ID = "darpan_rag_endpoint_1760863191758"
-
-# --- FORENSIC SERVICE URL ---
-# The live URL of your *other* service
-FORENSIC_SERVICE_URL = "https://darpan-forensic-service-361059167059.us-central1.run.app"
+# Silence TF logs
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 # ---------------------------
+# Configuration
+# ---------------------------
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "AIzaSyCd7b1x_JZPnHUfeD37XGjlONVFRkaFWSo")
+SEARCH_ENGINE_ID = os.environ.get("SEARCH_ENGINE_ID", "8428b10238cc84bdb")
+PROJECT_ID = os.environ.get("PROJECT_ID", "darpan-project")
+LOCATION = os.environ.get("LOCATION", "us-central1")
+MODEL_ID = os.environ.get("MODEL_ID", "gemini-2.5-flash")
 
-# --- TRUSTED "BRAIN" (Full 17 facts) ---
+# RAG endpoint config
+RAG_INDEX_ENDPOINT_ID = os.environ.get("RAG_INDEX_ENDPOINT_ID", "5271518339418554368")
+RAG_DEPLOYED_INDEX_ID = os.environ.get("RAG_DEPLOYED_INDEX_ID", "darpan_rag_endpoint_1760863191758")
+
+FORENSIC_SERVICE_URL = os.environ.get("FORENSIC_SERVICE_URL", "https://darpan-forensic-service-361059167059.us-central1.run.app")
+
+MODEL_BUCKET = os.environ.get("MODEL_BUCKET", "darpan-hackathon-us-central1")
+MODEL_GCS_PATH = os.environ.get("MODEL_GCS_PATH", "models/artifact-detector/v1_sample/model_weights.h5")
+LOCAL_MODEL_PATH = "/tmp/model_weights.h5"
+IMG_WIDTH, IMG_HEIGHT = 224, 224
+
+# Trusted corpus
 TRUSTED_CORPUS = {
-    "fact_1": "Fact-Check regarding 5G and COVID-19. There is no scientific evidence linking 5G technology to the spread of COVID-19. The World Health Organization (WHO) states that viruses cannot travel on radio waves or mobile networks. COVID-19 is spread through respiratory droplets when an infected person coughs, sneezes, or speaks. 5G is a mobile network technology, and the claims of it causing or spreading the virus are a harmful conspiracy theory.",
-    "fact_2": "Fact-Check regarding mRNA Vaccine. The mRNA vaccines for COVID-19 (like Pfizer and Moderna) do not alter human DNA. The 'm' in mRNA stands for 'messenger.' The vaccine provides instructions to your cells to build a piece of the 'spike protein' from the virus, which triggers an immune response. The mRNA never enters the nucleus of the cell, which is where our DNA is kept. After the instructions are used, the cell breaks down and disposes of the mRNA. This technology has been researched for decades.",
-    "fact_3": "Climate Change Consensus: Over 99% of climate scientists agree that climate change is happening and that human activity is the primary driver, mainly through the burning of fossil fuels. This consensus is based on multiple lines of evidence from diverse scientific disciplines. Claims dismissing this consensus often lack peer-reviewed support.",
-    "fact_4": "Vaccine Safety - Autism Link Debunked: Numerous large-scale scientific studies worldwide have conclusively shown there is no link between vaccines (including the MMR vaccine) and autism. The original study suggesting a link was retracted due to serious methodological flaws and ethical violations. Vaccines are a safe and effective public health tool.",
-    "fact_5": "Moon Landing Hoax Debunked: The Apollo moon landings were real events witnessed globally and supported by vast amounts of physical evidence, including moon rocks, photographs, mission data, and independent tracking by other nations. Conspiracy theories claiming the landings were faked ignore physics, technological evidence, and the sheer scale of the operation.",
-    "fact_6": "Flat Earth Theory Refuted: The Earth is demonstrably an oblate spheroid, not flat. Evidence includes satellite imagery, gravity measurements, the way ships disappear over the horizon hull-first, lunar eclipses showing Earth's curved shadow, and the experiences of astronauts and pilots circumnavigating the globe. Flat Earth theories contradict basic physics and observable reality.",
-    "fact_7": "Chemtrails Conspiracy Theory Explanation: The persistent trails left by airplanes are condensation trails, or 'contrails,' primarily composed of water vapor that freezes into ice crystals at high altitudes. They are not 'chemtrails' containing secret chemical or biological agents sprayed for nefarious purposes. Scientific analysis of contrails confirms they consist of water, carbon dioxide, and trace engine exhaust components, consistent with normal flight operations.",
-    "fact_8": "GMO Safety: Genetically modified organisms (GMOs) available today are considered safe to eat. Decades of scientific research and regulatory reviews worldwide have found no evidence that GMOs pose any unique health risks compared to conventionally bred crops. GMOs are often developed for beneficial traits like pest resistance or enhanced nutrition.",
-    "fact_9": "Fluoride in Water Benefits: Community water fluoridation is a safe and effective public health measure to prevent tooth decay. Scientific evidence overwhelmingly supports that fluoride levels used in public water systems significantly reduce cavities and pose no known health risks. Claims linking it to serious illnesses like cancer are unsubstantiated.",
-    "fact_10": "Area 51 Explanation: Area 51 is a highly classified United States Air Force facility in Nevada. While its primary purpose is publicly unknown, it's historically been used for the development and testing of experimental aircraft and weapons systems (like the U-2 spy plane). Claims of it housing extraterrestrial spacecraft or aliens are popular in fiction but lack credible evidence.",
-    "fact_11": "Hollow Earth Theory Debunked: Geological and seismological evidence overwhelmingly confirms that the Earth has a solid inner core, a liquid outer core, a mantle, and a crust. There is no scientific basis for the theory that the Earth is hollow or contains hidden civilizations within. Seismic waves traveling through the Earth provide detailed information about its internal structure.",
-    "fact_12": "Artificial Sweeteners Safety: Major health organizations worldwide (like the FDA and EFSA) consider approved artificial sweeteners (e.g., aspartame, sucralose) safe for consumption within acceptable daily intake levels. While research is ongoing, current scientific evidence does not support claims that they cause significant harm like cancer when consumed in typical amounts.",
-    "fact_13": "Lunar Eclipse Explanation: A lunar eclipse occurs when the Earth passes directly between the Sun and the Moon, casting a shadow on the Moon. It does not involve mythical creatures or herald specific doom. The reddish color ('blood moon') is due to sunlight filtering through Earth's atmosphere. These events are predictable astronomical phenomena.",
-    "fact_14": "Bigfoot/Yeti Existence Unproven: Despite anecdotal reports and blurry images or footprints, there is no conclusive scientific evidence (like DNA, clear photographs/videos, or fossil records) to confirm the existence of large, ape-like creatures such as Bigfoot or the Yeti. Most evidence presented is either misidentification, hoaxes, or lacks scientific rigor.",
-    "fact_15": "Bermuda Triangle Explained: The Bermuda Triangle is a region in the North Atlantic Ocean where some aircraft and ships are said to have disappeared under mysterious circumstances. However, investigations and statistical analyses show that the number of disappearances in this area is not significantly higher than in any other heavily trafficked part of the ocean. Many 'mysteries' have conventional explanations (e.g., weather, human error).",
-    "fact_16": "Organic Food vs Conventional Food Health Benefits: While organic farming practices avoid synthetic pesticides and fertilizers, scientific evidence does not show a significant nutritional or overall health benefit from eating organic food compared to conventionally grown food. Both can be part of a healthy diet. Pesticide residues on conventional foods are generally well below safety limits.",
-    "fact_17": "Crop Circles Origin: The vast majority of complex crop circles, particularly those appearing in the UK since the 1970s, are documented man-made hoaxes created by flattening crops, often at night, using simple tools like ropes and boards. While some simple circles might be caused by weather phenomena, claims of extraterrestrial or paranormal origins lack credible evidence."
+    "fact_1": "Fact-Check regarding 5G and COVID-19. There is no scientific evidence...",
+    "fact_2": "Fact-Check regarding mRNA Vaccine. The mRNA vaccines for COVID-19...",
+    "fact_3": "Climate Change Consensus: Over 99% of climate scientists agree...",
+    "fact_4": "Vaccine Safety - Autism Link Debunked: Numerous large-scale scientific studies...",
+    "fact_5": "Moon Landing Hoax Debunked: The Apollo moon landings were real events...",
+    "fact_6": "Flat Earth Theory Refuted: The Earth is demonstrably an oblate spheroid...",
+    "fact_7": "Chemtrails Conspiracy Theory Explanation: The persistent trails left by airplanes are 'contrails,'...",
+    "fact_8": "GMO Safety: Genetically modified organisms (GMOs) available today are considered safe...",
+    "fact_9": "Fluoride in Water Benefits: Community water fluoridation is a safe and effective...",
+    "fact_10": "Area 51 Explanation: Area 51 is a highly classified United States Air Force facility...",
+    "fact_11": "Hollow Earth Theory Debunked: Geological and seismological evidence...",
+    "fact_12": "Artificial Sweeteners Safety: Major health organizations worldwide consider...",
+    "fact_13": "Lunar Eclipse Explanation: A lunar eclipse occurs when the Earth passes...",
+    "fact_14": "Bigfoot/Yeti Existence Unproven: Despite anecdotal reports... no conclusive scientific evidence...",
+    "fact_15": "Bermuda Triangle Explained: The Bermuda Triangle is a region... investigations show...",
+    "fact_16": "Organic Food vs Conventional Food Health Benefits: ...scientific evidence does not show...",
+    "fact_17": "Crop Circles Origin: The vast majority of complex crop circles... are documented man-made hoaxes..."
 }
-# -----------------------------
 
-app = Flask(__name__)
-CORS(app) # Allow all origins
-
-# --- Initialize Vertex AI and Models (Global Scope) ---
+# ---------------------------
+# Globals
+# ---------------------------
+init_error = None
 llm_model = None
 embedding_model = None
 index_endpoint = None
-init_error = None
+translate_client = None
+db = None
+artifact_model = None
+
+# ---------------------------
+# Utility: Build model blueprint
+# ---------------------------
+def build_model(learning_rate=0.001):
+    print("--- Building EfficientNetB0 model architecture ---")
+    base_model = EfficientNetB0(include_top=False, weights='imagenet', input_shape=(IMG_WIDTH, IMG_HEIGHT, 3))
+    base_model.trainable = False
+    data_augmentation = tf.keras.Sequential([
+        layers.RandomFlip("horizontal"),
+        layers.RandomRotation(0.2),
+    ], name="data_augmentation")
+    inputs = layers.Input(shape=(IMG_WIDTH, IMG_HEIGHT, 3))
+    x = data_augmentation(inputs)
+    x = tf.keras.applications.efficientnet.preprocess_input(x)
+    x = base_model(x, training=False)
+    x = layers.GlobalAveragePooling2D()(x)
+    x = layers.Dropout(0.3)(x)
+    outputs = layers.Dense(1, activation='sigmoid')(x)
+    model = models.Model(inputs, outputs)
+    model.compile(optimizer=Adam(learning_rate=learning_rate), loss='binary_crossentropy', metrics=['accuracy'])
+    print("--- Model built and compiled successfully ---")
+    return model
+
+# ---------------------------
+# Initialization (run once)
+# ---------------------------
 try:
-    print(f"--- (Global Scope) Initializing Vertex AI in {LOCATION} ---")
+    if not PROJECT_ID:
+        raise ValueError("PROJECT_ID not configured.")
+    print(f"--- (Global Scope) Initializing Vertex AI in {LOCATION} for project {PROJECT_ID} ---")
     vertexai.init(project=PROJECT_ID, location=LOCATION)
     aiplatform.init(project=PROJECT_ID, location=LOCATION)
-    print("--- (Global Scope) Initializing Vertex AI Models ---")
+
+    print(f"--- (Global Scope) Initializing Vertex AI Models (LLM: {MODEL_ID}) ---")
     llm_model = GenerativeModel(MODEL_ID)
     embedding_model = TextEmbeddingModel.from_pretrained("text-embedding-004")
-    print(f"--- (Global Scope) Vertex AI Models Initialized: Using LLM '{MODEL_ID}' ---")
+    print("--- (Global Scope) Vertex AI Models Initialized ---")
 
-    print(f"--- (Global Scope) Connecting to Vector Search Endpoint in {LOCATION} ---")
+    print(f"--- (Global Scope) Connecting to Vector Search Endpoint {RAG_INDEX_ENDPOINT_ID} ---")
     endpoint_path = f"projects/{PROJECT_ID}/locations/{LOCATION}/indexEndpoints/{RAG_INDEX_ENDPOINT_ID}"
     index_endpoint = aiplatform.MatchingEngineIndexEndpoint(index_endpoint_name=endpoint_path)
-    print(f"--- (Global Scope) Successfully connected to Vector Search Endpoint: {endpoint_path} ---")
+    print(f"--- (Global Scope) Successfully connected to Vector Search Endpoint ---")
+
+    print(f"--- (Global Scope) Initializing Google Cloud Translate Client ---")
+    translate_client = translate.Client()
+    print(f"--- (Global Scope) Translate Client Initialized ---")
+
+    print(f"--- (Global Scope) Initializing Firestore Client ---")
+    db = firestore.Client(project=PROJECT_ID)
+    print(f"--- (Global Scope) Firestore Client Initialized ---")
+
+    # Load artifact model weights from GCS (download to /tmp)
+    print(f"--- (Global Scope) Loading ML Artifact Detector Model ---")
+    print(f"--- Downloading {MODEL_GCS_PATH} from GCS bucket {MODEL_BUCKET}... ---")
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(MODEL_BUCKET)
+    blob = bucket.blob(MODEL_GCS_PATH)
+    blob.download_to_filename(LOCAL_MODEL_PATH)
+    print(f"--- Model downloaded to {LOCAL_MODEL_PATH} ---")
+    
+    artifact_model = build_model()
+    artifact_model.load_weights(LOCAL_MODEL_PATH)
+    print(f"--- SUCCESSFULLY LOADED TRAINED WEIGHTS INTO ARTIFACT MODEL ---")
 
 except Exception as e:
     init_error = e
+    llm_model = embedding_model = index_endpoint = translate_client = db = artifact_model = None
     print(f"!!! (Global Scope) CRITICAL ERROR during Initialization: {e}")
     print(traceback.format_exc())
-# --- End Initialization ---
 
+# ---------------------------
+# Flask app & CORS
+# ---------------------------
+app = Flask(__name__)
+CORS(app)
 
-# --- google_search function ---
-def google_search(query):
-    print(f"--- google_search: Performing search for query: {query[:50]}... ---")
+@app.after_request
+def add_cors_headers(response):
+    response.headers.add("Access-Control-Allow-Origin", "*")
+    response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+    response.headers.add("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+    return response
+
+@app.route('/analyze', methods=['OPTIONS'])
+def analyze_preflight():
+    return jsonify({"status": "ok"}), 200
+
+@app.route('/analyze-media', methods=['OPTIONS'])
+def analyze_media_preflight():
+    return jsonify({"status": "ok"}), 200
+
+# ---------------------------
+# Helper: Google Search
+# ---------------------------
+def google_search(query, num=3):
+    if not GOOGLE_API_KEY or not SEARCH_ENGINE_ID:
+        print("!!! google_search: API Key or Search Engine ID not configured.")
+        return "Web search is not configured."
     try:
-        snippets = []
         service = build("customsearch", "v1", developerKey=GOOGLE_API_KEY)
-        res = service.cse().list(q=query, cx=SEARCH_ENGINE_ID, num=3).execute()
-        if 'items' in res:
-             for item in res['items']:
-                 snippet_text = item.get('snippet', 'N/A').replace('\n', ' ')
-                 link = item.get('link', '#')
-                 display_link = item.get('displayLink', 'N/A')
-                 snippets.append(f"Source: {display_link} ({link})\nSnippet: {snippet_text}")
+        res = service.cse().list(q=query, cx=SEARCH_ENGINE_ID, num=num).execute()
+        snippets = []
+        for item in res.get('items', []):
+            snippets.append(f"Title: {item.get('title', 'N/A')}\nSource: {item.get('displayLink', 'N/A')}\nSnippet: {item.get('snippet', 'N/A').replace(chr(10), ' ')}")
         print(f"--- google_search: Found {len(snippets)} web results.")
         return "\n---\n".join(snippets) if snippets else "No relevant web results found."
     except Exception as e:
-        print(f"!!! google_search: Error - {e}")
-        return "Google Search failed."
+        print(f"!!! google_search: CRITICAL ERROR - {e.__class__.__name__}: {e}")
+        return f"Google Search failed: {e.__class__.__name__}."
 
-
-# --- vector_search function ---
-def vector_search(query):
-    global embedding_model, index_endpoint
-    print(f"--- vector_search: Performing search for query: {query[:50]}... ---")
+# ---------------------------
+# Helper: Vector Search
+# ---------------------------
+def vector_search(query, threshold=0.7):
+    global embedding_model, index_endpoint, TRUSTED_CORPUS
     if not embedding_model or not index_endpoint:
         return "RAG components not initialized."
     try:
-        query_vector = embedding_model.get_embeddings([query])[0].values
-        print(f"--- vector_search: Query vector generated. ---")
-        response = index_endpoint.find_neighbors(
-            deployed_index_id=RAG_DEPLOYED_INDEX_ID,
-            queries=[query_vector],
-            num_neighbors=1
-        )
-        print(f"--- vector_search: Raw response received: {response} ---")
-        
-        retrieved_text = "No matching facts found in the trusted database."
-        if response and response[0]:
-            best_match = response[0][0]
-            # Assuming lower distance is better (Euclidean)
-            if best_match.distance < 0.7: 
-                corpus_match = TRUSTED_CORPUS.get(best_match.id)
-                if corpus_match:
-                    print(f"--- vector_search: Best match found: ID='{best_match.id}' ---")
-                    retrieved_text = corpus_match
-        return retrieved_text
+        query_embedding = embedding_model.get_embeddings([query])[0].values
+        response = index_endpoint.find_neighbors(deployed_index_id=RAG_DEPLOYED_INDEX_ID, queries=[query_embedding], num_neighbors=1)
+        if response and response[0] and len(response[0]) > 0:
+            best = response[0][0]
+            if best.distance < threshold:
+                return TRUSTED_CORPUS.get(best.id, "No matching facts found.")
+        return "No matching facts found in the trusted database."
     except Exception as e:
         print(f"!!! vector_search: Error during query - {e} !!!")
-        return "Trusted fact-check database query failed."
+        return f"Trusted fact-check database query failed: {e.__class__.__name__}."
 
+# ---------------------------
+# Helper: Translation
+# ---------------------------
+def translate_report_data(report_json, target_language):
+    global translate_client
+    if not translate_client or not target_language or target_language.lower().startswith('en'):
+        return report_json
+    fields = []
+    if report_json.get('summary'): fields.append(report_json['summary'])
+    for f in report_json.get('factors', []):
+        if f.get('name'): fields.append(f['name'])
+        if f.get('analysis'): fields.append(f['analysis'])
+    learn_more = report_json.get('learn_more', {})
+    if learn_more.get('title'): fields.append(learn_more['title'])
+    if learn_more.get('explanation'): fields.append(learn_more['explanation'])
+    if not fields:
+        return report_json
+    try:
+        print(f"--- translate_report_data: Calling Translation API for target '{target_language}'...")
+        results = translate_client.translate(fields, target_language=target_language, source_language='en')
+        mapping = {item['input']: item['translatedText'] for item in results}
+        
+        if report_json.get('summary'):
+            report_json['summary'] = mapping.get(report_json['summary'], report_json['summary'])
+        for f in report_json.get('factors', []):
+            f['name'] = mapping.get(f.get('name', ''), f.get('name', ''))
+            f['analysis'] = mapping.get(f.get('analysis', ''), f.get('analysis', ''))
+        if learn_more:
+            if learn_more.get('title'):
+                learn_more['title'] = mapping.get(learn_more['title'], learn_more['title'])
+            if learn_more.get('explanation'):
+                learn_more['explanation'] = mapping.get(learn_more['explanation'], learn_more['explanation'])
+        print("--- translate_report_data: Report fields updated with translations. ---")
+        return report_json
+    except Exception as e:
+        print(f"!!! translate_report_data: Translation API Error: {e}")
+        report_json['translation_error'] = str(e)
+        return report_json
 
-# --- Endpoint 1: Text Analysis (RAG + Web Search) ---
-@app.route('/analyze', methods=['POST'])
-def analyze_content():
-    print(f"--- /analyze ENTRY (LIVE - {LOCATION} / {MODEL_ID}) ---")
-    if init_error: return jsonify({"error": f"AI Service initialization failed: {init_error}"}), 500
-    if not all([llm_model, embedding_model, index_endpoint]):
-        return jsonify({"error": "AI Service components not available."}), 500
+# ---------------------------
+# Helper: ML artifact detector
+# ---------------------------
+def run_ml_artifact_detector(image_bytes):
+    global artifact_model
+    if not artifact_model:
+        return {"error": "ML model not available."}
+    try:
+        print("--- RUNNING REAL ML ARTIFACT DETECTOR ---")
+        img = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        img = img.resize((IMG_WIDTH, IMG_HEIGHT))
+        arr = np.array(img)
+        batch = np.expand_dims(arr, axis=0)
+        pred = artifact_model.predict(batch, verbose=0)
+        score = float(pred[0][0])
+        print(f"--- ML MODEL PREDICTION: {score:.4f} ---")
+        fake_likelihood_score = 1.0 - score
+        return {"artifact_detector": {"artifact_likelihood_score": fake_likelihood_score}}
+    except Exception as e:
+        print(f"!!! run_ml_artifact_detector error: {e}")
+        return {"error": str(e)}
+
+# ---------------------------
+# Helper: External forensic service
+# ---------------------------
+def run_external_forensics(file_bytes, mime_type, filename, timeout=120):
+    print(f"--- RUNNING EXTERNAL IMAGE FORENSICS (Calling: {FORENSIC_SERVICE_URL}) ---")
+    try:
+        files = {'file': (filename, file_bytes, mime_type)}
+        resp = requests.post(f"{FORENSIC_SERVICE_URL}/analyze-media-forensics", files=files, timeout=timeout)
+        if resp.status_code == 200:
+            print("--- EXTERNAL FORENSICS: Report received successfully. ---")
+            return resp.json()
+        print(f"!!! EXTERNAL FORENSICS Error: {resp.status_code} {resp.text}")
+        return {"error": f"forensic service status {resp.status_code}", "details": resp.text}
+    except Exception as e:
+        print(f"!!! run_external_forensics error: {e}")
+        return {"error": str(e)}
+
+# ---------------------------
+# Helper: Digital provenance
+# ---------------------------
+def run_digital_provenance(image_bytes):
+    print("--- RUNNING DIGITAL PROVENANCE (Vision API) ---")
+    try:
+        client = vision.ImageAnnotatorClient()
+        image = vision.Image(content=image_bytes)
+        resp = client.web_detection(image=image)
+        web = resp.web_detection
+    except Exception as e:
+        print(f"!!! Vision API error: {e}")
+        web = None
+
+    prov = {"web_origin": {}, "metadata": {}}
+    if web:
+        if web.best_guess_labels:
+            prov["web_origin"]["best_guess_label"] = web.best_guess_labels[0].label
+        if web.full_matching_images:
+            prov["web_origin"]["first_seen_url"] = web.full_matching_images[0].url
+        pages = []
+        for p in getattr(web, "pages_with_matching_images", [])[:5]:
+            pages.append({"url": p.url, "title": p.page_title})
+        prov["web_origin"]["pages_with_matching_pages"] = pages
 
     try:
-        # --- GET USER QUERY (RUNS ONCE) ---
-        data = request.get_json()
-        user_query = data.get('query')
-        if not user_query: return jsonify({"error": "Query not provided"}), 400
-
-        # --- CALL TEXT FORENSICS (RUNS ONCE) ---
-        print(f"--- /analyze: Performing text forensic analysis for query: {user_query[:50]}... ---")
-        text_forensic_results = analyze_text_forensics(user_query)
-        print(f"--- /analyze: Text forensic results: {text_forensic_results} ---")
-
-        # --- CALL WEB SEARCH & RAG (RUNS ONCE) ---
-        print(f"--- /analyze: Performing RAG/Web searches ---")
-        web_results = google_search(user_query)
-        rag_results = vector_search(user_query)
-        print("--- /analyze: RAG/Web search lookups completed ---")
-
-        # The enhanced prompt for text
-        prompt = f"""
-        Act as a "Trust Analysis" engine. Analyze the User's Text for misinformation, credibility, bias, and manipulation based *strictly* on the provided context (Web Search Results, Trusted Database Results **and Text Forensics Context**). Do not use external knowledge.
-
-        Your response MUST be a single, valid JSON object with NO other text before or after it. The JSON object must have the exact top-level keys: "score", "analysis", "factors", and "learn_more".
-
-        1.  **"score"**: Integer 0-100. Base heavily on alignment with Trusted DB/Web Search. High score indicates the claim is well-supported by credible context; low score indicates contradiction, lack of evidence, or misleading framing based on context.
-
-        2.  **"analysis"**: Provide a **detailed analysis summary** (2-4 sentences). Explain the reasoning behind the score, referencing specific findings from the Web Search or Trusted DB context. Explicitly state if the core claim was confirmed, refuted, or unverified by the context.
-
-        3.  **"factors"**: Array of exactly six JSON objects ("label", "value", "sentiment"). For each 'value', provide a **detailed explanation (1-2 sentences)** justifying the assessment based *only* on the provided context:
-            * "Source Credibility": Explain the nature and reliability of sources found in Web Search (e.g., "Web search yielded results from established scientific journals and reputable news outlets like BBC.", "Context includes links to personal blogs and forums lacking editorial oversight."). State N/A if no relevant web results. Assign 'sentiment'.
-            * "Fact-Checking": Explain whether the Trusted DB or Web Search context directly supports or contradicts the core claim (e.g., "The Trusted DB directly refutes this claim with Fact ID X.", "Web search results from health organizations contradict the user's statement."). Assign 'sentiment'.
-            * "Language Analysis": Explain the characteristics of the user's language (e.g., "The text uses neutral, objective language suitable for factual reporting.", "The text employs emotionally charged words and urgent calls to action, typical of persuasive or alarmist content."). Assign 'sentiment'.
-            * "Bias Detection": Explain any discernible bias or specific viewpoint promoted in the user's text compared to the context (e.g., "The text presents a one-sided argument, ignoring counter-evidence found in web search.", "The language suggests a strong political bias against the policy mentioned."). State N/A if neutral. Assign 'sentiment'.
-            * "Evidence Quality": Explain the type and strength of evidence presented *within the provided context* (e.g., "Context includes references to peer-reviewed studies providing strong evidence.", "The only evidence cited in context is anecdotal testimony."). Assign 'sentiment'.
-            * "Contextual Accuracy": Explain how accurately the user's claim reflects the nuances or findings within the provided context (e.g., "The claim accurately summarizes the findings reported in the web search results.", "The claim cherry-picks data from the context, presenting a misleading picture."). Assign 'sentiment'.
-
-        4.  **"learn_more"**: An object containing educational information with the exact keys: "title", "explanation", and "sources".
-            * **"title"**: A concise, educational heading that helps users understand the misinformation. Examples: 
-            - "Myth vs Reality: Understanding the Facts"
-            - "Know Before You Share"
-            - "Why This Claim Is Misleading"    
-            - "Learn the Truth About [Topic]". Choose one that matches the claim type and tone of the analysis.
-            * **"explanation"**: A brief (2-3 sentences) educational note explaining *why* the claim might be misleading, based on the analysis (e.g., explain the logical fallacy used, the danger of anecdotal evidence, how emotional language can manipulate, the importance of source verification). Tailor this to the specific issues identified.
-            * **"sources"**: Array of 1-2 strings suggesting specific, reputable websites or organizations where the user can find accurate information or cross-check the claim (e.g., "WHO website for health information", "NASA.gov for space science", "Snopes.com or FactCheck.org for general claims", "Look for peer-reviewed scientific journals"). Be specific and relevant to the query topic.
-
-        User's Text:
-        ---
-        {user_query}
-        ---
-        Live Web Search Results:
-        ---
-        {web_results}
-        ---
-        Trusted Fact-Check Database Results (Prioritize this):
-        ---
-        {rag_results}
-        ---
-        **Text Forensics Context:** ---
-        {json.dumps(text_forensic_results, indent=2)}
-        ---
-        Return ONLY the raw JSON object. Ensure all fields are populated according to these instructions.
-        """
-
-        print(f"--- /analyze: Calling {MODEL_ID} (Text) ---")
-        response = llm_model.generate_content(
-            [prompt],
-            generation_config={"response_mime_type": "application/json"}
-        )
-        print("--- /analyze: Gemini call DONE ---")
-
-        if not response.candidates or not response.candidates[0].content.parts:
-             feedback = response.prompt_feedback if hasattr(response, 'prompt_feedback') else 'N/A'
-             print(f"!!! /analyze: Gemini response empty/blocked. Feedback: {feedback}")
-             error_msg = "AI model response blocked or empty." + (f" Reason: {feedback.block_reason}" if feedback and hasattr(feedback, 'block_reason') else "")
-             return jsonify({"error": error_msg}), 500
-
-        response_text = response.text
-        print(f"--- /analyze: Received raw JSON response ---")
-
-        try:
-            report_data = json.loads(response_text)
-            # --- Validation ---
-            if not all(k in report_data for k in ["score", "analysis", "factors", "learn_more"]):
-                raise ValueError("JSON missing required keys (score, analysis, factors, learn_more)")
-            if not isinstance(report_data["factors"], list) or len(report_data["factors"]) != 6:
-                 raise ValueError("Factors array is invalid (expected 6)")
-
-            # --- ADD FORENSIC DATA TO RESPONSE ---
-            report_data["text_forensics"] = text_forensic_results
-
-            # --- RETURN ---
-            return jsonify(report_data), 200
-
-        except (json.JSONDecodeError, ValueError) as json_err:
-             print(f"!!! /analyze: JSON Parsing/Validation Error - {json_err} !!! Raw text: {response_text}")
-             return jsonify({"error": f"AI model returned invalid format: {json_err}", "raw_response": response_text}), 500
-
+        stream = io.BytesIO(image_bytes)
+        tags = exifread.process_file(stream, details=True, stop_tag='UNDEF', strict=False)
+        cleaned = {}
+        suspicious = []
+        for tag, value in tags.items():
+            if tag in ('JPEGThumbnail', 'TIFFThumbnail', 'EXIF MakerNote'): continue
+            tag_str, val_str = str(tag), str(value.values)
+            if tag_str.lower() in ['image software', 'exif image description', 'image description'] and any(k in val_str.lower() for k in ['photoshop', 'gimp', 'ai']):
+                suspicious.append(val_str)
+            cleaned[tag_str] = val_str
+        prov['metadata'] = {"has_metadata": bool(cleaned), "suspicious_tags": suspicious, "all_tags": cleaned}
     except Exception as e:
-        print(f"--- /analyze EXCEPTION HANDLER ---")
-        print(f"Error Class: {e.__class__.__name__}, Message: {e}")
-        print(traceback.format_exc())
-        return jsonify({"error": f"An internal server error occurred: {str(e)}"}), 500
+        print(f"!!! EXIFRead failed: {e}")
+        prov['metadata'] = {"error": str(e)}
+    print("--- DIGITAL PROVENANCE COMPLETE ---")
+    return prov
 
-# --- Endpoint 2: Media Analysis (Calls Forensic Service + Gemini) ---
-@app.route('/analyze-media', methods=['POST'])
-def analyze_media():
-    print(f"--- /analyze-media ENTRY (LIVE - {LOCATION} / {MODEL_ID}) ---")
+# ---------------------------
+# Helper: Save ledger
+# ---------------------------
+def save_to_ledger(case_id, report_json, score):
+    global db
+    if not db:
+        print("!!! save_to_ledger: Firestore client not initialized. Skipping.")
+        return None
+    try:
+        rep_str = json.dumps(report_json, sort_keys=True)
+        report_hash = hashlib.sha256(rep_str.encode('utf-8')).hexdigest()
+        doc_ref = db.collection(u'reports').document(case_id)
+        doc_ref.set({
+            u'case_id': case_id,
+            u'sha256_hash': report_hash,
+            u'timestamp': firestore.SERVER_TIMESTAMP,
+            u'trust_score': score
+        })
+        print(f"--- save_to_ledger: Successfully saved report hash for case ID {case_id} ---")
+        return report_hash
+    except Exception as e:
+        print(f"!!! save_to_ledger: FAILED to save report hash to Firestore: {e}")
+        return None
+
+# ---------------------------
+# Helper: Pruning Functions (FIXED)
+# ---------------------------
+def prune_forensic_report_for_gemini(raw):
+    pruned = {}
+    if not isinstance(raw, dict): return {"error": "invalid_forensic_payload"}
+
+    # --- FIX: Check if 'scatter_analysis' is a dict before .get() ---
+    scatter_data = raw.get('scatter_analysis', {})
+    if isinstance(scatter_data, dict):
+        pruned['scatter_summary'] = {
+            "synthetic_likelihood": scatter_data.get('synthetic_likelihood', 'N/A')
+        }
+    else:
+        pruned['scatter_summary'] = {"error": "No scatter data"}
+
+    # --- FIX: Check if 'binwalk' is a dict before .get() ---
+    binwalk_data = raw.get('binwalk', {})
+    if isinstance(binwalk_data, dict):
+        pruned['binwalk_summary'] = binwalk_data.get('summary', "No binwalk summary.")
+    else:
+        pruned['binwalk_summary'] = str(binwalk_data) # It's a string, just pass it
+
+    # --- FIX: Check if 'steghide' is a dict before .get() ---
+    steghide_data = raw.get('steghide', {})
+    if isinstance(steghide_data, dict):
+        pruned['steghide_summary'] = steghide_data.get('summary', "No steghide summary.")
+    else:
+        pruned['steghide_summary'] = str(steghide_data)
+
+    # --- FIX: Check if 'metadata' is a dict before .get() ---
+    metadata_data = raw.get('metadata', {})
+    if isinstance(metadata_data, dict):
+        exif_data = metadata_data.get('ExifTool', {})
+        if isinstance(exif_data, dict):
+            pruned['metadata_summary'] = {
+                "Software": exif_data.get("Software", "N/A"),
+                "ModifyDate": exif_data.get("ModifyDate", "N/A"),
+                "CreatorTool": exif_data.get("CreatorTool", "N/A")
+            }
+        else:
+            pruned['metadata_summary'] = "No EXIF data."
+    else:
+        pruned['metadata_summary'] = "Metadata invalid."
+        
+    return pruned
+
+def prune_provenance_report_for_gemini(raw):
+    pruned = {}
+    if not isinstance(raw, dict): return {"error": "invalid_provenance_payload"}
+    
+    pruned['web_origin'] = raw.get('web_origin', {"error": "No web origin data"})
+    
+    metadata = raw.get('metadata', {})
+    if isinstance(metadata, dict):
+        pruned['metadata_summary'] = {
+            "has_metadata": metadata.get('has_metadata', False),
+            "suspicious_tags": metadata.get('suspicious_tags', [])
+        }
+    else:
+        pruned['metadata_summary'] = {"error": "Metadata invalid."}
+        
+    return pruned
+
+# ---------------------------
+# Endpoint: Text analysis (RESTORED 6-FACTOR PROMPT)
+# ---------------------------
+@app.route('/analyze', methods=['POST'])
+def analyze_content():
     if init_error: return jsonify({"error": f"AI Service initialization failed: {init_error}"}), 500
-    if not llm_model: return jsonify({"error": "AI Service LLM not available."}), 500
+    if not all([llm_model, embedding_model, index_endpoint, translate_client, db]):
+        return jsonify({"error": "AI components missing."}), 500
 
     start_time = time.time()
     try:
-        if 'file' not in request.files: return jsonify({"error": "No file part"}), 400
-        file = request.files['file']
-        prompt_text = request.form.get('prompt', '')
-        if file.filename == '': return jsonify({"error": "No selected file"}), 400
+        data = request.get_json()
+        if not data: return jsonify({"error": "Invalid JSON"}), 400
+        user_query = data.get('query')
+        lang = data.get('lang', 'en').split('-')[0]
+        if not user_query: return jsonify({"error": "No query"}), 400
 
-        file_bytes = file.read()
-        mime_type = magic.from_buffer(file_bytes, mime=True)
-        print(f"--- /analyze-media: Received '{file.filename}', mime: {mime_type} ---")
+        text_forensic_results = analyze_text_forensics(user_query) if lang == 'en' else {"error": f"forensics not for {lang}"}
+        rag_results = vector_search(user_query)
+        web_results = google_search(user_query)
 
-        # --- 1. CALL FORENSIC SERVICE ---
-        forensic_report_json = {}
-        try:
-            print(f"--- /analyze-media: Calling Forensic Service at {FORENSIC_SERVICE_URL} ---")
-            files_for_forensic = {'file': (file.filename, file_bytes, mime_type)}
-            
-            response = requests.post(FORENSIC_SERVICE_URL + "/analyze-media-forensics", files=files_for_forensic, timeout=300)
-            
-            if response.status_code == 200:
-                forensic_report_json = response.json()
-                print("--- /analyze-media: Forensic report received. ---")
-            else:
-                print(f"!!! Forensic Service Error: {response.status_code} {response.text}")
-                forensic_report_json = {"error": f"Forensic tool failed: {response.status_code}", "details": response.text}
-        except Exception as fe:
-            print(f"!!! Forensic Service Exception: {fe}")
-            forensic_report_json = {"error": f"Forensic tool exception: {str(fe)}"}
+        system_prompt = f"""
+        You are 'Darpan', a neutral, professional, and multilingual AI fact-checking analyst.
+        Your task is to synthesize a 'Trusted Compass Report' based *only* on the evidence provided.
+        You must analyze the user's text and the JSON evidence block.
+        **Important: Respond entirely in English.**
 
-        # --- 2. PREPARE PROVENANCE CONTEXT ---
-        provenance_info = "C2PA/Provenance check not yet implemented." # Placeholder
+        <user_text>
+        {user_query}
+        </user_text>
 
-        # --- 3. CREATE MEDIA PART FOR GEMINI ---
-        media_part = Part.from_data(data=file_bytes, mime_type=mime_type)
+        <evidence>
+        {{
+            "web_search": {json.dumps(web_results)},
+            "rag_search": {json.dumps(rag_results)},
+            "text_forensics": {json.dumps(text_forensic_results)}
+        }}
+        </evidence>
 
-        # --- 4. ENHANCED GEMINI PROMPT (9 FACTORS) ---
-        prompt_parts = [
-            media_part,
-            Part.from_text(f"""
-            Act as a "Trust Analysis" engine for media. Your task is to perform a deep forensic analysis.
-            You MUST synthesize three sources of information:
-            1.  Your own **visual analysis** of the media (artifacts, lighting, consistency).
-            2.  The **"Provenance Check Context"** (e.g., C2PA data).
-            3.  The **"Forensic Report Context"** (which includes metadata, binary structure, and steganography results from our tool).
+        **Analysis Instructions:**
+        1.  **Analyze Evidence:**
+            * `rag_search`: This is your *most trusted* source.
+            * `web_search`: This is live context. Are the sources reputable?
+            * `text_forensics`: This analyzes the *style* (AI-generated, subjectivity).
+        2.  **Synthesize & Score:**
+            * Generate a `score` from 0 (High Risk) to 100 (Trusted).
+            * If `rag_search` or `web_search` *contradict* the claim, the score MUST be low.
+            * If `rag_search` or `web_search` *confirm* the claim from reputable sources, the score MUST be high.
+        3.  **Generate Report:**
+            * **Summary (Critical):** Write a professional, comprehensive summary (at least 2-3 sentences). Start with the final verdict, then *explain the reasoning* by referencing the evidence (e.g., "The user's text... is strongly supported by the provided web search results. Snippets from reputable hospital websites... confirm that...").
+            * **Factors (Critical):** Fill out the analysis for all **6 factors** with a detailed explanation.
+            * You MUST generate a JSON object in the following format.
 
-            Your response MUST be a single, valid JSON object with NO other text before or after it.
-            The JSON object must have the exact top-level keys: "score", "analysis", "factors", and "learn_more".
-
-            1.  **"score"**: Integer 0–100. Base this on all evidence. A low score (0-40) indicates strong evidence of manipulation, AI generation, or misleading context. A high score (75-100) indicates strong evidence of authenticity.
-
-            2.  **"analysis"**: Provide a **detailed summary (3-5 sentences)** explaining the reasoning for the score. You MUST explicitly synthesize findings from your visual analysis AND the provided context (e.g., "Visually, the image shows inconsistent shadows. This is corroborated by the 'Forensic Report Context', which notes the file was edited in 'Adobe Photoshop' and the 'Scatter Analysis' indicates non-natural patterns."). **If the Forensic Report indicates a high synthetic likelihood or AI artifacts, state this clearly.**
-
-            3.  **"factors"**: Array of exactly **nine (9)** JSON objects ("label", "value", "sentiment"). 
-                Each 'value' must include a concise but detailed explanation (1–2 sentences):
-                * "Visual Consistency": (Visual Analysis) Assess lighting, shadows, focus, and perspective.
-                * "Object Integrity": (Visual Analysis) Assess the appearance of objects/people (e..g, hands, faces, text).
-                * "Contextual Plausibility": (Visual Analysis + User Prompt) Assess if the scene is logical or plausible.
-                * "Manipulation Signs": (Visual Analysis) Identify direct indicators of editing (e.g., blurring, pixel mismatch).
-                * **"Metadata Analysis"**: (Context) Based *only* on 'Forensic Report' -> 'metadata_exiftool', summarize key findings (e.g., "EXIF data shows file was edited with 'Adobe Photoshop'.", "No metadata (EXIF) found.").
-                * **"Binary Structure"**: (Context) Based *only* on 'Forensic Report' -> 'binary_structure_binwalk', state if hidden files were found (e.g., "No embedded files detected.", "High-entropy block found, suggests hidden data.").
-                * **"Steganography Check"**: (Context) Based *only* on 'Forensic Report' -> 'steganography_steghide'/'zsteg', state if steganography is likely (e.g., "Steghide check negative.", "Zsteg detected potential hidden data.").
-                * **"Provenance Check"**: (Context) Based *only* on 'Provenance Check Context', summarize what was found (e.g., "No C2PA provenance data detected.").
-                * "Overall Authenticity": (Combined) A concluding judgment integrating all observations (e.g., "Multiple inconsistencies suggest AI generation.", "Image appears authentic.").
-            
-            4.  **"learn_more"**: An educational object with keys: "title", "explanation", and "sources".
-                * "title": A concise educational heading (e.g., "Spotting AI-Generated Images", "Why Metadata Matters").
-                * "explanation": 2–3 sentences educating the user based on *specific issues identified* (e.g., "Stripped metadata is a common tactic to hide a file's origin.").
-                * "sources": Array of 1–2 trustworthy resources (e.g., "Google Reverse Image Search", "C2PA.org").
-
-            User's Prompt (if any): '{prompt_text}'
-            ---
-            **Provenance Check Context:**
-            {provenance_info}
-            ---
-            **Forensic Report Context:**
-            {json.dumps(forensic_report_json, indent=2)} 
-            ---
-            Return ONLY the raw JSON object. Ensure all fields are fully populated.
-            """)
-        ]
-
-        # --- *** 5. CALL GEMINI & RETURN *** ---
-        print(f"--- /analyze-media: Calling {MODEL_ID} (Media) ---")
-        response = llm_model.generate_content(
-            prompt_parts,
-            generation_config={"response_mime_type": "application/json"}
-        )
-        print("--- /analyze-media: Gemini call DONE ---")
-
-        if not response.candidates or not response.candidates[0].content.parts:
-             feedback = response.prompt_feedback if hasattr(response, 'prompt_feedback') else 'N/A'
-             print(f"!!! /analyze-media: Gemini response empty/blocked. Feedback: {feedback}")
-             error_msg = "AI model response blocked or empty." + (f" Reason: {feedback.block_reason}" if feedback and hasattr(feedback, 'block_reason') else "")
-             return jsonify({"error": error_msg}), 500
-
+        {{
+          "score": <int, 0-100>,
+          "summary": "<string, A 2-3 sentence, detailed, professional summary explaining the verdict by referencing the evidence.>",
+          "factors": [
+            {{
+              "name": "Source Credibility",
+              "analysis": "<string, Detailed analysis of web_search sources. Example: 'Web search yielded results from established healthcare providers... which are considered credible sources.'>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Fact-Checking",
+              "analysis": "<string, Detailed analysis of RAG and Web. Example: 'The core claims are directly corroborated by the web search results... No conflicting information was found...'>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Language Analysis",
+              "analysis": "<string, Detailed analysis of text_forensics. Example: 'The user's text employs neutral, objective, and informative language...'>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Bias Detection",
+              "analysis": "<string, Detailed analysis of bias. Example: 'The text presents a widely accepted medical viewpoint... with no discernible bias...'>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Evidence Quality",
+              "analysis": "<string, Analysis of the evidence. Example: 'The context provides strong evidence in the form of recommendations from reputable medical institutions...'>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Contextual Accuracy",
+              "analysis": "<string, Analysis of claim accuracy. Example: 'The user's claim... is directly reflected and confirmed by the web search results. There is no misrepresentation.'>",
+              "score": <int, 0-100>
+            }}
+          ],
+          "report_payload": {{
+            "rag_hits": "<string, (Omitted from prompt)>",
+            "web_hits": "<string, (Omitted from prompt)>"
+          }},
+          "learn_more": {{
+            "title": "Text Analysis Deep Dive",
+            "explanation": "This report was generated by cross-referencing web results and our internal fact-check database. The text itself was also analyzed for linguistic anomalies, bias, and sentiment."
+          }}
+        }}
+        """
+        print(f"--- /analyze: Calling {MODEL_ID} (Text) with {len(system_prompt)} char prompt... ---")
+        response = llm_model.generate_content([system_prompt], generation_config={"response_mime_type": "application/json"})
         response_text = response.text
-        print(f"--- /analyze-media: Received raw JSON response ---")
+        print(f"--- /analyze: Received raw English JSON response ({len(response_text)} chars). ---")
+        
+        report_data = json.loads(response_text)
+        if "score" not in report_data or "summary" not in report_data:
+            raise ValueError("Gemini response missing required keys")
 
-        try:
-            report_data = json.loads(response_text)
-            # ** VALIDATE FOR 9 FACTORS **
-            if not all(k in report_data for k in ["score", "analysis", "factors", "learn_more"]):
-                 raise ValueError("JSON missing required keys (score, analysis, factors, learn_more)")
-            if not isinstance(report_data["factors"], list) or len(report_data["factors"]) != 9:
-                 raise ValueError(f"Factors array is invalid (expected 9, got {len(report_data.get('factors', []))})")
-            
-            # --- *** 6. ADD REPORTING FEATURE PAYLOAD *** ---
-            if report_data.get("score", 100) < 40: # If score is low, add payload
-                report_data["report_payload"] = {
-                    "type": "misinformation_report",
-                    "timestamp": datetime.utcnow().isoformat() + "Z",
-                    "user_query": prompt_text,
-                    "file_info": {"name": file.filename, "mime_type": mime_type},
-                    "forensic_report": forensic_report_json, # Attach the raw forensic data
-                    "ai_analysis": report_data["analysis"]
-                }
-            # --- *** END REPORTING FEATURE *** ---
-            
-            processing_time = time.time() - start_time
-            print(f"--- /analyze-media: Success. Time: {processing_time:.2f}s ---")
-            return jsonify(report_data), 200
-        except (json.JSONDecodeError, ValueError) as json_err:
-             print(f"!!! /analyze-media: JSON Parsing/Validation Error - {json_err} !!! Raw text: {response_text}")
-             return jsonify({"error": f"AI model returned invalid format: {json_err}", "raw_response": response_text}), 500
+        report_data = translate_report_data(report_data.copy(), lang)
+        report_data['text_forensics'] = text_forensic_results
+        case_id = f"text-{int(time.time())}"
+        report_data['caseId'] = case_id
+        report_hash = save_to_ledger(case_id, report_data, report_data.get('score'))
+        report_data['sha256_hash'] = report_hash
+        
+        elapsed = time.time() - start_time
+        print(f"--- /analyze: Success. Language: '{lang}'. Time: {elapsed:.2f}s ---")
+        return jsonify(report_data), 200
 
     except Exception as e:
-        processing_time = time.time() - start_time
-        print(f"--- /analyze-media EXCEPTION HANDLER. Time: {processing_time:.2f}s ---")
-        print(f"Error Class: {e.__class__.__name__}, Message: {e}")
+        elapsed = time.time() - start_time
+        print(f"--- /analyze EXCEPTION HANDLER. Time: {elapsed:.2f}s ---")
         print(traceback.format_exc())
-        error_message = f"Failed to analyze media: {e.__class__.__name__}"
-        if "NotFound" in str(e) or "PublisherModel" in str(e):
-             error_message = "Configuration Error: AI model access denied."
-        return jsonify({"error": error_message, "details": str(e)}), 500
+        return jsonify({"error": f"An internal server error occurred: {str(e)}"}), 500
 
-@app.route('/report-misinformation', methods=['POST'])
-def report_misinformation():
-    """
-    Receives the report payload from the frontend.
-    For now, just logs it clearly. Replace with actual reporting logic later.
-    """
-    print("--- /report-misinformation RECEIVED ---")
+# ---------------------------
+# Endpoint: Media analysis (RESTORED 9-FACTOR PROMPT)
+# ---------------------------
+@app.route('/analyze-media', methods=['POST'])
+def analyze_media():
+    if init_error: return jsonify({"error": f"AI Service initialization failed: {init_error}"}), 500
+    if not all([llm_model, embedding_model, index_endpoint, translate_client, db, artifact_model]):
+        return jsonify({"error": "AI components missing."}), 500
+
+    start_time = time.time()
     try:
-        report_data = request.get_json()
-        if not report_data:
-            return jsonify({"error": "No report data received"}), 400
+        if 'file' not in request.files:
+            return jsonify({"error": "No file part"}), 400
+        
+        file = request.files['file']
+        prompt = request.form.get('prompt', '') or ''
+        lang = request.form.get('lang', 'en').split('-')[0] # Get lang from form
+        filename = file.filename or "upload.jpg"
+        
+        file.seek(0)
+        file_bytes = file.read()
+        if not file_bytes:
+            return jsonify({"error": "empty file"}), 400
+        mime_type = magic.from_buffer(file_bytes, mime=True)
+        print(f"--- /analyze-media: Received '{filename}', mime: {mime_type}, size: {len(file_bytes)} bytes ---")
 
-        # --- *** TODO: Implement Real Reporting Logic *** ---
-        # 1. Validate the report_data structure.
-        # 2. Format it (e.g., into an email body or structured log).
-        # 3. Send it (e.g., using an email library, logging service, or database).
+        # --- Run all analysis modules in parallel (IO-bound) ---
+        evidence = {}
+        evidence_for_gemini = {}
+        tasks = {}
+        with ThreadPoolExecutor(max_workers=5) as ex:
+            tasks['forensic'] = ex.submit(run_external_forensics, file_bytes, mime_type, filename, 120)
+            tasks['provenance'] = ex.submit(run_digital_provenance, file_bytes)
+            tasks['ml'] = ex.submit(run_ml_artifact_detector, file_bytes)
+            tasks['web'] = ex.submit(google_search, prompt)
+            tasks['rag'] = ex.submit(vector_search, prompt)
 
-        # For now, just log the received data clearly:
-        print("--- MISINFORMATION REPORT PAYLOAD ---")
-        print(json.dumps(report_data, indent=2))
-        print("------------------------------------")
-        # --- *** End TODO *** ---
+        # Collect results
+        for name, future in tasks.items():
+            try:
+                res = future.result(timeout=125) # 125s total timeout
+            except Exception as e:
+                print(f"!!! Task {name} failed: {e}")
+                res = {"error": str(e)}
+            
+            evidence_key_map = {
+                'forensic': 'forensic_report',
+                'provenance': 'provenance_report',
+                'ml': 'ml_model_report',
+                'web': 'web_hits',
+                'rag': 'rag_hits'
+            }
+            evidence[evidence_key_map[name]] = res
 
-        return jsonify({"status": "Report received and logged (Demo)"}), 200
+        # --- Build PRUNED evidence for Gemini (small) ---
+        evidence_for_gemini['forensic_service_report'] = prune_forensic_report_for_gemini(evidence.get('forensic_report', {}))
+        evidence_for_gemini['digital_provenance'] = prune_provenance_report_for_gemini(evidence.get('provenance_report', {}))
+        evidence_for_gemini['ml_artifact_detector'] = evidence.get('ml_model_report', {})
+        evidence_for_gemini['web_search'] = evidence.get('web_hits', [])
+        evidence_for_gemini['rag_search'] = evidence.get('rag_hits', {})
+        
+        print("--- /analyze-media: All analysis modules complete. ---")
+        
+        # --- ** RESTORED 9-FACTOR PROMPT (LIKE YOUR OLD SCREENSHOT) ** ---
+        system_prompt = f"""
+        You are 'Darpan', a neutral, professional, and multilingual AI fact-checking analyst.
+        Your task is to synthesize a 'Trusted Compass Report' based *only* on the evidence provided.
+        You must analyze the user's prompt (the claim) AND the image, plus all the forensic evidence.
+        **Important: Respond entirely in English.**
+
+        <user_prompt_claim>
+        {prompt}
+        </user_prompt_claim>
+
+        <evidence>
+        {json.dumps(evidence_for_gemini)}
+        </evidence>
+
+        **Analysis Instructions & Evidence Weighting:**
+        1.  **Analyze All Evidence:**
+            * `digital_provenance`: This is your *most critical* evidence. Look at `web_origin.first_seen_url` (is it old?), `best_guess_label` (does it match?), and `metadata_summary.suspicious_tags` (Photoshop?).
+            * `forensic_service_report`: This is your second most critical. Look at `scatter_summary.synthetic_likelihood` (is it high?), `metadata_summary.Software` (does it confirm Photoshop?).
+            * `ml_artifact_detector`: This is your new REAL model. `artifact_likelihood_score` is the probability the image is FAKE (0.0 to 1.0). A score > 0.7 is a strong sign of AI generation.
+            * `web_search` / `rag_search`: Use this to check the *user's prompt_claim*. Is the *event* real?
+        2.  **Synthesize & Score:**
+            * Generate a `score` from 0 (High Risk) to 100 (Trusted).
+            * If `digital_provenance`, `forensic_service_report`, or `ml_artifact_detector` show strong proof of manipulation, the score MUST be low (< 30).
+        3.  **Generate Report:**
+            * **Summary (Critical):** Write a professional, comprehensive summary (at least 2-3 sentences). Start with the final verdict, then *explain the reasoning* by referencing the specific evidence (e.g., "The image is likely AI-generated. The 'ML Forensic Analysis' model detected a 92% (0.92) likelihood of generative artifacts. This is supported by the 'Scatter Analysis' from the forensic report...").
+            * **Factors (Critical):** Fill out the analysis for all **9 factors** with a detailed explanation.
+            * You MUST generate a JSON object in the following format.
+
+        {{
+          "score": <int, 0-100>,
+          "summary": "<string, A 2-3 sentence, detailed, professional summary explaining the verdict by referencing ALL evidence.>",
+          "factors": [
+            {{
+              "name": "Visual Consistency",
+              "analysis": "<string, Your visual analysis of lighting, shadows, and focus.>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Object Integrity",
+              "analysis": "<string, Your visual analysis of hands, faces, text, and objects.>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Contextual Plausibility",
+              "analysis": "<string, Does this scene make sense? (e.g., 'A pope in a puffer jacket is highly implausible.')>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Manipulation Signs",
+              "analysis": "<string, Your visual analysis for blurring, pixel mismatches, etc.>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Metadata Analysis",
+              "analysis": "<string, Synthesize findings from 'digital_provenance.metadata_summary' and 'forensic_service_report.metadata_summary'. (e.g., 'EXIF data was stripped and 'Photoshop' tag was found.')>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Binary Structure",
+              "analysis": "<string, Summarize the 'forensic_service_report.binwalk_summary' findings. (e.g., 'Binwalk analysis found no embedded files.')>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Steganography Check",
+              "analysis": "<string, Summarize the 'forensic_service_report.steghide_summary' findings. (e.g., 'Steghide check was negative.')>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "Provenance Check",
+              "analysis": "<string, Summarize the 'digital_provenance.web_origin' findings. (e.g., 'Reverse image search was inconclusive' or 'Image first seen in 2018...')>",
+              "score": <int, 0-100>
+            }},
+            {{
+              "name": "ML Forensic Analysis",
+              "analysis": "<string, Summarize the 'ml_artifact_detector.artifact_detector.artifact_likelihood_score'. (e.g., 'The ML model detected a 0.85 (85%) likelihood of AI-generated artifacts.')>",
+              "score": <int, 0-100>
+            }}
+          ],
+          "report_payload": {{
+            "rag_hits": "<string, (Omitted from prompt, will be populated in final code)>",
+            "web_hits": "<string, (Omitted from prompt, will- be populated in final code)>",
+            "provenance_report": "<object, (Omitted from prompt, will be populated in final code)>",
+            "forensic_report": "<object, (Omitted from prompt, will be populated in final code)>",
+            "ml_model_report": "<object, (Omitted from prompt, will be populated in final code)>"
+          }},
+          "learn_more": {{
+            "title": "Digital Provenance & Forensic Report",
+            "explanation": "This report was generated by a hybrid system. It includes a Digital Provenance check (reverse image search and EXIF data) and a Deep Forensic Analysis (metadata, binary structure, and manipulation analysis)."
+          }}
+        }}
+        """
+
+        prompt_size = len(system_prompt)
+        print(f"--- /analyze-media: Calling {MODEL_ID} (Media) with {prompt_size} char prompt... ---")
+        
+        response = llm_model.generate_content([system_prompt], generation_config={"response_mime_type": "application/json"})
+        response_text = response.text
+        print(f"--- /analyze-media: Received raw English JSON response ({len(response_text)} chars). ---")
+
+        report_data = json.loads(response_text)
+        if "score" not in report_data or "summary" not in report_data:
+            raise ValueError("Gemini response missing required keys")
+
+        # Add the full evidence payload *after* parsing Gemini's response
+        report_data['report_payload'] = {
+            "rag_hits": evidence.get('rag_hits'),
+            "web_hits": evidence.get('web_hits'),
+            "provenance_report": evidence.get('provenance_report'),
+            "forensic_report": evidence.get('forensic_report'),
+            "ml_model_report": evidence.get('ml_model_report')
+        }
+
+        # Translate & ledger
+        report_data = translate_report_data(report_data.copy(), lang)
+        case_id = f"media-{int(time.time())}"
+        report_data['caseId'] = case_id
+        report_hash = save_to_ledger(case_id, report_data, report_data.get('score'))
+        report_data['sha256_hash'] = report_hash
+
+        elapsed = time.time() - start_time
+        print(f"--- /analyze-media: Success. Language: '{lang}'. Time: {elapsed:.2f}s ---")
+        return jsonify(report_data), 200
 
     except Exception as e:
-        print(f"!!! /report-misinformation ERROR: {e}")
+        elapsed = time.time() - start_time
+        print(f"--- /analyze-media EXCEPTION HANDLER. Time: {elapsed:.2f}s ---")
         print(traceback.format_exc())
-        return jsonify({"error": f"Failed to process report: {str(e)}"}), 500
+        return jsonify({"error": f"An internal server error occurred: {str(e)}"}), 500
 
-# --- HEALTH CHECK Endpoint ---
-@app.route("/", methods=["GET"])
-def health():
+# ---------------------------
+# Healthcheck
+# ---------------------------
+@app.route('/health', methods=['GET'])
+def health_check():
+    if init_error:
+        return jsonify({"status": "error", "message": str(init_error)}), 500
     status = {
-        "status": "ok",
-        "model_id": MODEL_ID,
-        "location": LOCATION,
-        "init_error": str(init_error) # Convert error to string for JSON
+        "llm_model": bool(llm_model),
+        "embedding_model": bool(embedding_model),
+        "index_endpoint": bool(index_endpoint),
+        "translate_client": bool(translate_client),
+        "db": bool(db),
+        "artifact_model": bool(artifact_model)
     }
-    return jsonify(status)
+    ok = all(status.values())
+    return jsonify({"status": "ok" if ok else "error", "services": status}), (200 if ok else 500)
 
-# --- Main execution ---
+# ---------------------------
+# Run
+# ---------------------------
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 8080))
-    print(f"--- Starting Flask Server for Gunicorn on port {port} in {LOCATION} with {MODEL_ID} ---")
-    app.run(debug=False, host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=False)

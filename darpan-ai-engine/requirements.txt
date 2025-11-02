@@ -17,3 +17,12 @@ requests
 nltk
 textstat
 textblob
+google-cloud-translate
+google-cloud-vision
+exifread
+google-cloud-firestore
+
+tensorflow-cpu
+numpy
+Pillow
+google-cloud-storage

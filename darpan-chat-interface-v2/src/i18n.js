@@ -1,0 +1,1143 @@
+// src/i18n.js
+// --- FINAL CORRECTED FILE (v2) ---
+
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import LanguageDetector from 'i18next-browser-languagedetector';
+
+// --- ENGLISH TRANSLATIONS (MASTER COPY) ---
+const enTranslation = {
+  // -- Welcome & "How to Use" --
+  "welcome.title": "Welcome to Darpan AI Trust Analysis",
+  "welcome.howToUse": "How to Use",
+  "welcome.textTitle": "Text Analysis (For Claims & Articles)",
+  "welcome.textStep1": "Type or paste your text (e.g., \"Does 5G cause COVID-19?\") into the chatbox.",
+  "welcome.textStep2": "Press the 'Send' button.",
+  "welcome.textStep3": "Review the 6-Factor C.O.N.T.E.X.T. Report.",
+  "welcome.imageTitle": "Image/Media Analysis (For Photos & Memes)",
+  "welcome.imageStep1": "Click the 'Paperclip' icon to attach an image.",
+  "welcome.imageStep2": "Recommended: Add a text prompt to explain the image's claim (e.g., \"Is this real?\").",
+  "welcome.imageStep3": "Press 'Send'. Review the 9-Factor Forensic Report.",
+  "welcome.micTitle": "Voice Input (Beta)",
+  "welcome.micStep1": "Click the 'Microphone' icon.",
+  "welcome.micStep2": "Accept the browser permission when prompted.",
+  "welcome.micStep3": "Start speaking. Click the icon again to stop.",
+  "welcome.instruction": "Enter text, paste a URL, or attach an image to begin.",
+  "welcome.history": "Your session history will appear on the left.",
+
+  // -- Statuses --
+  "status.trustworthy": "Trustworthy",
+  "status.questionable": "Questionable",
+  "status.notTrustworthy": "Not Trustworthy",
+  "status.stanceHigh": "High Confidence in Accuracy",
+  "status.stanceMedium": "Potential Inaccuracies Detected",
+  "status.stanceLow": "High Risk of Misinformation",
+  
+  // -- Sentiments --
+  "sentiment.positive": "Positive",
+  "sentiment.negative": "Negative",
+  "sentiment.neutral": "Neutral",
+  
+  // -- Header --
+  "header.analysisSession": "Analysis Session ({{count}} reports)",
+  "header.startAnalysis": "Start New Analysis",
+  "header.exportButton": "Export Report",
+  "header.exportTooltip": "Export currently viewed report",
+  "header.exportDisabledTooltip": "Run or select an analysis to enable export",
+  "header.resetButton": "Reset Session",
+  "header.resetTooltip": "Reset session and history",
+  "header.resetDisabledTooltip": "No session to reset",
+  
+  // -- Chat & History --
+  "chat.imageAttached": "Image Attached",
+  "chat.placeholder": "Type your claim, paste a link, or attach an image...",
+  "history.textAnalysisDefaultName": "Text Analysis",
+  "history.pastTime": "past",
+
+  // -- Report Card (ChatMessage) --
+  "report.title": "Trust Compass Report",
+  "report.ttsRead": "Read summary aloud",
+  "report.ttsStop": "Stop speaking",
+  "report.stancePrefix": "Stance",
+  "report.analysisSummary": "Analysis Summary",
+  "report.contextTitle": "Darpan C.O.N.T.E.X.T. Analysis",
+  "report.textForensicsTitle": "🧠 Text Forensics Summary",
+  "report.tfAiLikelihood": "AI Likelihood (Heuristic):",
+  "report.tfReadability": "Readability (Flesch):",
+  "report.tfSentiment": "Sentiment Polarity:",
+  "report.tfSubjectivity": "Subjectivity:",
+  "report.tfDiversity": "Lexical Diversity (TTR):",
+  "report.tfErrorTitle": "⚠️ Text Forensics Error",
+  "report.feedbackPrompt": "Was this analysis helpful?",
+  "report.feedbackHelpful": "Helpful",
+  "report.feedbackNotHelpful": "Not Helpful",
+  "report.feedbackCopy": "Copy Summary",
+  "report.feedbackReport": "Report to Authorities",
+  "report.learnMore": "Learn More",
+  "report.verificationResources": "Verification Resources:",
+  "report.shareTextPrefix": "Darpan AI Analysis:",
+  "report.shareTextScore": "Score",
+  "report.shareTextSummary": "Summary",
+  "report.mailSubject": "Report of Potential Misinformation - Case ID: {{caseId}}",
+  "report.mailBody": "To the Cyber Crime Cell,\n\nPlease find the attached Darpan analysis report (Case ID: {{caseId}}) for review regarding potential misinformation.\n\nTrust Score: {{score}}/100\nSummary: {{summary}}\n\nThank you.",
+
+  // -- PDF Report Keys --
+  "pdf.section.caseDetails": "Case Details",
+  "pdf.caseId": "Case ID:",
+  "pdf.fileName": "File Name:",
+  "pdf.sha256": "SHA-256:",
+  "pdf.generated": "Generated:",
+  "pdf.textInput": "Text Input",
+  "pdf.section.aiSummary": "AI Analysis Summary (Gemini)",
+  "pdf.section.contextMedia": "C.O.N.T.E.X.T. Analysis Factors (Media)",
+  "pdf.section.contextText": "C.O.N.T.E.X.T. Analysis Factors (Text)",
+  "pdf.section.textForensics": "Text Forensics Summary",
+  "pdf.tfAiLikelihood": "AI Likelihood (Heuristic):",
+  "pdf.tfReadability": "Readability (Flesch Ease):",
+  "pdf.tfSentiment": "Sentiment Polarity:",
+  "pdf.tfSubjectivity": "Subjectivity:",
+  "pdf.tfDiversity": "Lexical Diversity (TTR):",
+  "pdf.tfBurstiness": "Burstiness (Variance Heuristic):",
+  "pdf.tfRepetition": "Repetition (Trigram Ratio):",
+  "pdf.tfErrorPrefix": "Text Forensics Error",
+  "pdf.section.detailedForensics": "Detailed Forensic Findings",
+  "pdf.forensicErrorPrefix": "Forensic Service Error",
+  "pdf.forensicErrorDetails": "Details",
+  "pdf.noDetails": "No details.",
+  "pdf.subSection.scatter": "Scatter Analysis",
+  "pdf.scatterSynthLikelihood": "Synthetic Likelihood:",
+  "pdf.scatterEntropies": "Entropies (R/G/B):",
+  "pdf.scatterCorrelations": "Correlations (RG/RB/GB):",
+  "pdf.section.appendix": "Appendix: Raw Forensic Data",
+  "pdf.subSection.metadata": "Metadata (ExifTool)",
+  "pdf.subSection.binary": "Binary Structure (Binwalk)",
+  "pdf.subSection.stego": "Steganography (Steghide)",
+  "pdf.noExif": "No ExifTool data found.",
+  "pdf.noBinwalk": "No Binwalk data found.",
+  "pdf.noStego": "No Steghide data found.",
+  "pdf.noForensicData": "No detailed forensic data was found in the report payload.",
+  "pdf.section.digitalProvenance": "Digital Provenance",
+  "pdf.subSection.webOrigin": "Web Origin (Reverse Search)",
+  "pdf.prov.software": "Editing Software:",
+  "pdf.prov.make": "Device Make:",
+  "pdf.prov.model": "Device Model:",
+  "pdf.prov.suspicious": "Suspicious Tags:",
+  "pdf.noneDetected": "None detected.",
+  "pdf.noExif": "No readable EXIF metadata found.",
+  "pdf.prov.bestGuess": "Best Guess Label:",
+  "pdf.noGuess": "No guess available.",
+  "pdf.prov.firstSeen": "First Seen On:",
+  "pdf.notFound": "No clear origin found.",
+  "pdf.prov.matchingPages": "Matching Pages:",
+  "pdf.noMatchingPages": "No other pages found.",
+
+  // -- Learn More Dialog --
+  "learnMore": {
+    "title": "In-Depth Provenance Report",
+    "description": "A detailed breakdown of the media's digital history and metadata.",
+    "webOriginTitle": "Web Origin (Reverse Image Search)",
+    "bestGuess": "Best Guess Label",
+    "firstSeen": "First Seen On (Oldest Known Source)",
+    "notFound": "No clear origin found.",
+    "matchingPages": "Other Pages Using This Image",
+    "noMatches": "No other pages found using this image.",
+    "metadataTitle": "Image Metadata (EXIF)",
+    "suspiciousTags": "Suspicious Software Tags",
+    "noneFound": "None Detected",
+    "allTags": "All Raw Metadata",
+    "noMetadata": "No metadata (EXIF) was found in this file. This is common in images from social media, as they often strip this data."
+  },
+
+  // -- Toasts & Errors --
+  "toast.fileTooLarge": "File is too large",
+  "toast.fileTooLargeDesc": "Please select a file smaller than 10MB.",
+  "chat.attachImage": "Attach image",
+  "toast.micNotSupported": "Mic Not Supported",
+  "toast.micNotSupportedDesc": "Your browser does not support speech recognition.",
+  "toast.listening": "Listening...",
+  "toast.micListeningDesc": "Speak now, click mic to stop.",
+  "toast.micError": "Mic Error",
+  "toast.micErrorDesc": "Speech recognition failed. Please try again.",
+  "toast.saveHistoryFail": "Failed to save history",
+  "toast.loadedHistory": "Loaded from History",
+  "toast.loadedHistoryDesc": "Displaying report from {{time}}",
+  "toast.analysisComplete": "Analysis Complete",
+  "toast.analysisCompleteDesc": "Trust score: {{score}}/100",
+  "toast.analysisFailed": "Analysis Failed",
+  "toast.sessionReset": "Session Reset",
+  "toast.sessionResetDesc": "Analysis and history cleared.",
+  "toast.noReportSelected": "No Report Selected",
+  "toast.noReportSelectedDesc": "Run an analysis or select one from history.",
+  "toast.generatingPdf": "Generating PDF Report...",
+  "toast.pleaseWait": "Please wait...",
+  "toast.pdfExported": "PDF Report Exported",
+  "toast.pdfExportedDesc": "Report saved successfully.",
+  "toast.exportFailed": "Export Failed",
+  "toast.exportFailedDesc": "An error occurred generating the PDF.",
+  "toast.languageChanged": "Language Changed",
+  "toast.languageChangedDesc": "Interface language set to {{lng}}",
+  "toast.speechNotAvailable": "Speech Not Available",
+  "toast.speechError": "Speech Error",
+  "toast.feedbackSubmitted": "Feedback Submitted",
+  "toast.feedbackDesc": "Thanks for helping improve Darpan AI!",
+  "toast.copied": "Copied to Clipboard",
+  "toast.copyFailed": "Copy Failed",
+  "toast.reportSubmitted": "Content Reported",
+  "toast.reportDesc": "Your report has been submitted for review.",
+  "toast.reportFailed": "Report Submission Failed",
+  "error.invalidReport": "Received invalid report format from server.",
+  "error.unknown": "An unknown error occurred.",
+  "error.analysisFailedPrefix": "Analysis Failed"
+};
+
+// --- HINDI TRANSLATIONS ---
+const hiTranslation = {
+  // -- Welcome & "How to Use" --
+  "welcome.title": "दर्पण एआई ट्रस्ट विश्लेषण में आपका स्वागत है",
+  "welcome.howToUse": "कैसे उपयोग करें",
+  "welcome.textTitle": "पाठ विश्लेषण (दावों और लेखों के लिए)",
+  "welcome.textStep1": "चैटबॉक्स में अपना टेक्स्ट टाइप करें या पेस्ट करें (जैसे, \"क्या 5G से COVID-19 होता है?\")।",
+  "welcome.textStep2": "'भेजें' (Send) बटन दबाएं।",
+  "welcome.textStep3": "6-फैक्टर C.O.N.T.E.X.T. रिपोर्ट की समीक्षा करें।",
+  "welcome.imageTitle": "छवि/मीडिया विश्लेषण (तस्वीरों और मीम्स के लिए)",
+  "welcome.imageStep1": "एक छवि संलग्न करने के लिए 'पेपरक्लिप' आइकन पर क्लिक करें।",
+  "welcome.imageStep2": "अनुशंसित: छवि के दावे को समझाने के लिए एक टेक्स्ट प्रॉम्प्ट जोड़ें (जैसे, \"क्या यह असली है?\")।",
+  "welcome.imageStep3": "'भेजें' (Send) दबाएं। 9-फैक्टर फोरेंसिक रिपोर्ट की समीक्षा करें।",
+  "welcome.micTitle": "वॉयस इनपुट (बीटा)",
+  "welcome.micStep1": "'माइक्रोफोन' आइकन पर क्लिक करें।",
+  "welcome.micStep2": "संकेत मिलने पर ब्राउज़र की अनुमति स्वीकार करें।",
+  "welcome.micStep3": "बोलना शुरू करें। रोकने के लिए आइकन को फिर से क्लिक करें।",
+  "welcome.instruction": "आरंभ करने के लिए टेक्स्ट दर्ज करें, यूआरएल पेस्ट करें, या एक छवि संलग्न करें।",
+  "welcome.history": "आपका सत्र इतिहास बाईं ओर दिखाई देगा।",
+
+  // -- Statuses --
+  "status.trustworthy": "भरोसेमंद",
+  "status.questionable": "संदिग्ध",
+  "status.notTrustworthy": "भरोसेमंद नहीं",
+  "status.stanceHigh": "सटीकता पर उच्च विश्वास",
+  "status.stanceMedium": "संभावित गलतियाँ पाई गईं",
+  "status.stanceLow": "गलत सूचना का उच्च जोखिम",
+  "sentiment.positive": "सकारात्मक",
+  "sentiment.negative": "नकारात्मक",
+  "sentiment.neutral": "तटस्थ",
+  
+  // -- Header --
+  "header.analysisSession": "विश्लेषण सत्र ({{count}} रिपोर्ट)",
+  "header.startAnalysis": "नया विश्लेषण शुरू करें",
+  "header.exportButton": "रिपोर्ट निर्यात करें",
+  "header.exportTooltip": "वर्तमान में देखी गई रिपोर्ट निर्यात करें",
+  "header.exportDisabledTooltip": "निर्यात सक्षम करने के लिए विश्लेषण चलाएँ या चुनें",
+  "header.resetButton": "सत्र रीसेट करें",
+  "header.resetTooltip": "सत्र और इतिहास साफ़ करें",
+  "header.resetDisabledTooltip": "रीसेट करने के लिए कोई सत्र नहीं है",
+  
+  // -- Chat & History --
+  "chat.imageAttached": "छवि संलग्न है",
+  "chat.placeholder": "अपना दावा टाइप करें, लिंक पेस्ट करें, या छवि संलग्न करें...",
+  "history.textAnalysisDefaultName": "पाठ विश्लेषण",
+  "history.pastTime": "अतीत",
+
+  // -- Report Card (ChatMessage) --
+  "report.title": "ट्रस्ट कम्पास रिपोर्ट",
+  "report.ttsRead": "सारांश ज़ोर से पढ़ें",
+  "report.ttsStop": "बोलना बंद करो",
+  "report.stancePrefix": "रुख",
+  "report.analysisSummary": "विश्लेषण सारांश",
+  "report.contextTitle": "दर्पण C.O.N.T.E.X.T. विश्लेषण",
+  "report.textForensicsTitle": "🧠 टेक्स्ट फोरेंसिक सारांश",
+  "report.tfAiLikelihood": "एआई संभावना (अनुमानित):",
+  "report.tfReadability": "पठनीयता (फ्लेश):",
+  "report.tfSentiment": "भावना ध्रुवीयता:",
+  "report.tfSubjectivity": "विषयपरकता:",
+  "report.tfDiversity": "शाब्दिक विविधता (टीटीआर):",
+  "report.tfErrorTitle": "⚠️ टेक्स्ट फोरेंसिक त्रुटि",
+  "report.feedbackPrompt": "क्या यह विश्लेषण उपयोगी था?",
+  "report.feedbackHelpful": "उपयोगी",
+  "report.feedbackNotHelpful": "उपयोगी नहीं",
+  "report.feedbackCopy": "सारांश कॉपी करें",
+  "report.feedbackReport": "अधिकारियों को रिपोर्ट करें",
+  "report.learnMore": "और अधिक जानें",
+  "report.verificationResources": "सत्यापन संसाधन:",
+  "report.shareTextPrefix": "दर्पण एआई विश्लेषण:",
+  "report.shareTextScore": "स्कोर",
+  "report.shareTextSummary": "सारांश",
+  "report.mailSubject": "संभावित गलत सूचना की रिपोर्ट - केस आईडी: {{caseId}}",
+  "report.mailBody": "साइबर क्राइम सेल को,\n\nकृपया संभावित गलत सूचना के संबंध में समीक्षा के लिए संलग्न दर्पण विश्लेषण रिपोर्ट (केस आईडी: {{caseId}}) प्राप्त करें।\n\nट्रस्ट स्कोर: {{score}}/100\nसारांश: {{summary}}\n\nधन्यवाद।",
+
+  // -- PDF Report Keys --
+  "pdf.section.caseDetails": "केस विवरण",
+  "pdf.caseId": "केस आईडी:",
+  "pdf.fileName": "फ़ाइल का नाम:",
+  "pdf.sha256": "SHA-256:",
+  "pdf.generated": "उत्पन्न:",
+  "pdf.textInput": "पाठ इनपुट",
+  "pdf.section.aiSummary": "एआई विश्लेषण सारांश (जेमिनी)",
+  "pdf.section.contextMedia": "C.O.N.T.E.X.T. विश्लेषण कारक (मीडिया)",
+  "pdf.section.contextText": "C.O.N.T.E.X.T. विश्लेषण कारक (पाठ)",
+  "pdf.section.textForensics": "टेक्स्ट फोरेंसिक सारांश",
+  "pdf.tfAiLikelihood": "एआई संभावना (अनुमानित):",
+  "pdf.tfReadability": "पठनीयता (फ्लेश ईज़):",
+  "pdf.tfSentiment": "भावना ध्रुवीयता:",
+  "pdf.tfSubjectivity": "विषयपरकता:",
+  "pdf.tfDiversity": "शाब्दिक विविधता (टीटीआर):",
+  "pdf.tfBurstiness": "बर्स्टिनेस (विचरण अनुमान):",
+  "pdf.tfRepetition": "पुनरावृत्ति (ट्रिग्राम अनुपात):",
+  "pdf.tfErrorPrefix": "टेक्स्ट फोरेंसिक त्रुटि",
+  "pdf.section.detailedForensics": "विस्तृत फोरेंसिक निष्कर्ष",
+  "pdf.forensicErrorPrefix": "फोरेंसिक सेवा त्रुटि",
+  "pdf.forensicErrorDetails": "विवरण",
+  "pdf.noDetails": "कोई विवरण नहीं।",
+  "pdf.subSection.scatter": "स्कैटर विश्लेषण",
+  "pdf.scatterSynthLikelihood": "सिंथेटिक संभावना:",
+  "pdf.scatterEntropies": "एन्ट्रॉपी (R/G/B):",
+  "pdf.scatterCorrelations": "सहसंबंध (RG/RB/GB):",
+  "pdf.section.appendix": "परिशिष्ट: कच्चा फोरेंसिक डेटा",
+  "pdf.subSection.metadata": "मेटाडेटा (ExifTool)",
+  "pdf.subSection.binary": "बाइनरी संरचना (बिनवॉक)",
+  "pdf.subSection.stego": "स्टेग्नोग्राफ़ी (स्टेगाइड)",
+  "pdf.noExif": "कोई ExifTool डेटा नहीं मिला।",
+  "pdf.noBinwalk": "कोई Binwalk डेटा नहीं मिला।",
+  "pdf.noStego": "कोई Steghide डेटा नहीं मिला।",
+  "pdf.noForensicData": "रिपोर्ट पेलोड में कोई विस्तृत फोरेंसिक डेटा नहीं मिला।",
+  "pdf.section.digitalProvenance": "डिजिटल प्रोवेनेंस",
+  "pdf.subSection.webOrigin": "वेब ओरिजिन (रिवर्स सर्च)",
+  "pdf.prov.software": "संपादन सॉफ्टवेयर:",
+  "pdf.prov.make": "डिवाइस मेक:",
+  "pdf.prov.model": "डिवाइस मॉडल:",
+  "pdf.prov.suspicious": "संदिग्ध टैग:",
+  "pdf.noneDetected": "कोई नहीं मिला।",
+  "pdf.noExif": "कोई पठनीय EXIF मेटाडेटा नहीं मिला।",
+  "pdf.prov.bestGuess": "सर्वश्रेष्ठ अनुमान लेबल:",
+  "pdf.noGuess": "कोई अनुमान उपलब्ध नहीं है।",
+  "pdf.prov.firstSeen": "पहली बार यहां देखा गया:",
+  "pdf.notFound": "कोई स्पष्ट स्रोत नहीं मिला।",
+  "pdf.prov.matchingPages": "मिलते-जुलते पेज:",
+  "pdf.noMatchingPages": "कोई अन्य पेज नहीं मिला।",
+  
+  // -- Learn More Dialog --
+  "learnMore": {
+    "title": "गहन प्रोवेनेंस रिपोर्ट",
+    "description": "मीडिया के डिजिटल इतिहास और मेटाडेटा का विस्तृत विश्लेषण।",
+    "webOriginTitle": "वेब ओरिजिन (रिवर्स इमेज सर्च)",
+    "bestGuess": "सर्वश्रेष्ठ अनुमान लेबल",
+    "firstSeen": "पहली बार यहां देखा गया (सबसे पुराना ज्ञात स्रोत)",
+    "notFound": "कोई स्पष्ट स्रोत नहीं मिला।",
+    "matchingPages": "इस छवि का उपयोग करने वाले अन्य पेज",
+    "noMatches": "इस छवि का उपयोग करने वाले कोई अन्य पेज नहीं मिले।",
+    "metadataTitle": "छवि मेटाडेटा (EXIF)",
+    "suspiciousTags": "संदिग्ध सॉफ्टवेयर टैग",
+    "noneFound": "कोई नहीं मिला",
+    "allTags": "सभी रॉ मेटाडेटा",
+    "noMetadata": "इस फ़ाइल में कोई मेटाडेटा (EXIF) नहीं मिला। यह सोशल मीडिया से छवियों में आम है, क्योंकि वे अक्सर इस डेटा को हटा देते हैं।"
+  },
+  
+  // -- Toasts & Errors --
+  "toast.fileTooLarge": "फ़ाइल बहुत बड़ी है",
+  "toast.fileTooLargeDesc": "कृपया 10MB से छोटी फ़ाइल चुनें।",
+  "chat.attachImage": "छवि संलग्न करें",
+  "toast.micNotSupported": "माइक समर्थित नहीं है",
+  "toast.micNotSupportedDesc": "आपका ब्राउज़र स्पीच रिकग्निशन का समर्थन नहीं करता है।",
+  "toast.listening": "सुन रहा है...",
+  "toast.micListeningDesc": "अभी बोलें, रोकने के लिए माइक पर क्लिक करें।",
+  "toast.micError": "माइक त्रुटि",
+  "toast.micErrorDesc": "स्पीच रिकग्निशन विफल रहा। कृपया पुनः प्रयास करें।",
+  "toast.saveHistoryFail": "इतिहास सहेजने में विफल",
+  "toast.loadedHistory": "इतिहास से लोड किया गया",
+  "toast.loadedHistoryDesc": "{{time}} से रिपोर्ट प्रदर्शित की जा रही है",
+  "toast.analysisComplete": "विश्लेषण पूर्ण",
+  "toast.analysisCompleteDesc": "ट्रस्ट स्कोर: {{score}}/100",
+  "toast.analysisFailed": "विश्लेषण विफल",
+  "toast.sessionReset": "सत्र रीसेट",
+  "toast.sessionResetDesc": "विश्लेषण और इतिहास साफ़ किया गया।",
+  "toast.noReportSelected": "कोई रिपोर्ट नहीं चुनी गई",
+  "toast.noReportSelectedDesc": "कोई विश्लेषण चलाएँ या इतिहास से एक चुनें।",
+  "toast.generatingPdf": "पीडीएफ रिपोर्ट तैयार की जा रही है...",
+  "toast.pleaseWait": "कृपया प्रतीक्षा करें...",
+  "toast.pdfExported": "पीडीएफ रिपोर्ट निर्यात की गई",
+  "toast.pdfExportedDesc": "रिपोर्ट सफलतापूर्वक सहेजी गई।",
+  "toast.exportFailed": "निर्यात विफल",
+  "toast.exportFailedDesc": "पीडीएफ बनाते समय एक त्रुटि हुई।",
+  "toast.languageChanged": "भाषा बदल दी गई है",
+  "toast.languageChangedDesc": "इंटरफेस भाषा {{lng}} पर सेट की गई है",
+  "toast.speechNotAvailable": "वाणी उपलब्ध नहीं है",
+  "toast.speechError": "वाणी त्रुटि",
+  "toast.feedbackSubmitted": "प्रतिक्रिया सबमिट की गई",
+  "toast.feedbackDesc": "दर्पण एआई को बेहतर बनाने में मदद करने के लिए धन्यवाद!",
+  "toast.copied": "क्लिपबोर्ड पर कॉपी किया गया",
+  "toast.copyFailed": "कॉपी विफल",
+  "toast.reportSubmitted": "सामग्री की रिपोर्ट की गई",
+  "toast.reportDesc": "आपकी रिपोर्ट समीक्षा के लिए सबमिट कर दी गई है।",
+  "toast.reportFailed": "रिपोर्ट सबमिशन विफल",
+  "error.invalidReport": "सर्वर से अमान्य रिपोर्ट प्रारूप प्राप्त हुआ।",
+  "error.unknown": "एक अज्ञात त्रुटि हुई।",
+  "error.analysisFailedPrefix": "विश्लेषण विफल"
+};
+
+// --- TAMIL TRANSLATIONS ---
+const taTranslation = {
+  // -- Welcome & "How to Use" -- (PLACEHOLDER: PLEASE TRANSLATE)
+  "welcome.title": "தர்பன் AI நம்பிக்கை பகுப்பாய்விற்கு வரவேற்கிறோம்", // Translated
+  "welcome.howToUse": "எப்படி பயன்படுத்துவது", // Translated
+  "welcome.textTitle": "உரை பகுப்பாய்வு (கோரிக்கைகள் & கட்டுரைகளுக்கு)", // Translated
+  "welcome.textStep1": "உங்கள் உரையை தட்டச்சு செய்யவும் (எ.கா., \"5G கோவிட்-19 ஐ ஏற்படுத்துமா?\") Chatbox இல்.", // Translated
+  "welcome.textStep2": "'அனுப்பு' (Send) பொத்தானை அழுத்தவும்.", // Translated
+  "welcome.textStep3": "6-காரணி C.O.N.T.E.X.T. அறிக்கையை மதிப்பாய்வு செய்யவும்.", // Translated
+  "welcome.imageTitle": "படம்/மீடியா பகுப்பாய்வு (புகைப்படங்கள் & மீம்ஸ்களுக்கு)", // Translated
+  "welcome.imageStep1": "ஒரு படத்தைப் பதிவேற்ற 'பேப்பர்கிளிப்' ஐகானைக் கிளிக் செய்யவும்.", // Translated
+  "welcome.imageStep2": "பரிந்துரை: படத்தின் கோரிக்கையை விளக்க ஒரு உரைச் செய்தியைச் சேர்க்கவும் (எ.கா., \"இது உண்மையா?\").", // Translated
+  "welcome.imageStep3": "'அனுப்பு' (Send) ஐ அழுத்தவும். 9-காரணி தடயவியல் அறிக்கையை மதிப்பாய்வு செய்யவும்.", // Translated
+  "welcome.micTitle": "குரல் உள்ளீடு (பீட்டா)", // Translated
+  "welcome.micStep1": "'மைக்ரோஃபோன்' ஐகானைக் கிளிக் செய்யவும்.", // Translated
+  "welcome.micStep2": "கேட்கும்போது உலாவி அனுமதியை ஏற்கவும்.", // Translated
+  "welcome.micStep3": "பேசத் தொடங்குங்கள். நிறுத்த மீண்டும் ஐகானைக் கிளிக் செய்யவும்.", // Translated
+  "welcome.instruction": "தொடங்க, உரையை உள்ளிடவும், URL ஐ ஒட்டவும் அல்லது ஒரு படத்தைப் பதிவேற்றவும்.",
+  "welcome.history": "உங்கள் அமர்வு வரலாறு இடதுபுறத்தில் தோன்றும்.",
+  
+  // -- Statuses --
+  "status.trustworthy": "நம்பகமானது",
+  "status.questionable": "சந்தேகத்திற்குரியது",
+  "status.notTrustworthy": "நம்பகத்தன்மையற்றது",
+  "status.stanceHigh": "துல்லியத்தில் அதிக நம்பிக்கை",
+  "status.stanceMedium": "சாத்தியமான தவறுகள் கண்டறியப்பட்டன",
+  "status.stanceLow": "தவறான தகவல்களின் அதிக ஆபத்து",
+  "sentiment.positive": "நேர்மறை",
+  "sentiment.negative": "எதிர்மறை",
+  "sentiment.neutral": "நடுநிலை",
+  
+  // -- Header --
+  "header.analysisSession": "பகுப்பாய்வு அமர்வு ({{count}} அறிக்கைகள்)",
+  "header.startAnalysis": "புதிய பகுப்பாய்வைத் தொடங்கு",
+  "header.exportButton": "அறிக்கையை ஏற்றுமதி செய்",
+  "header.exportTooltip": "தற்போது பார்க்கும் அறிக்கையை ஏற்றுமதி செய்",
+  "header.exportDisabledTooltip": "ஏற்றுமதி செய்ய, ஒரு பகுப்பாய்வை இயக்கவும் அல்லது தேர்ந்தெடுக்கவும்",
+  "header.resetButton": "அமர்வை மீட்டமை",
+  "header.resetTooltip": "அமர்வு மற்றும் வரலாற்றை மீட்டமை",
+  "header.resetDisabledTooltip": "மீட்டமைக்க அமர்வு இல்லை",
+  
+  // -- Chat & History --
+  "chat.imageAttached": "படம் இணைக்கப்பட்டுள்ளது",
+  "chat.placeholder": "உங்கள் கோரிக்கையைத் தட்டச்சு செய்யவும், இணைப்பை ஒட்டவும் அல்லது படத்தைப் பதிவேற்றவும்...",
+  "history.textAnalysisDefaultName": "உரை பகுப்பாய்வு",
+  "history.pastTime": "கடந்த காலம்",
+
+  // -- Report Card (ChatMessage) --
+  "report.title": "நம்பிக்கை திசைகாட்டி அறிக்கை",
+  "report.ttsRead": "சுருக்கத்தை உரக்கப் படியுங்கள்",
+  "report.ttsStop": "பேசுவதை நிறுத்து",
+  "report.stancePrefix": "நிலைப்பாடு",
+  "report.analysisSummary": "பகுப்பாய்வு சுருக்கம்",
+  "report.contextTitle": "தர்பன் C.O.N.T.E.X.T. பகுப்பாய்வு",
+  "report.textForensicsTitle": "🧠 உரை தடயவியல் சுருக்கம்",
+  "report.tfAiLikelihood": "AI வாய்ப்பு (ஹியூரிஸ்டிக்):",
+  "report.tfReadability": "படிக்க எளிதான தன்மை (ஃபிளெஷ்):",
+  "report.tfSentiment": "உணர்வு துருவமுனைப்பு:",
+  "report.tfSubjectivity": "தலைப்பட்சம்:",
+  "report.tfDiversity": "சொல் பன்முகத்தன்மை (TTR):",
+  "report.tfErrorTitle": "⚠️ உரை தடயவியல் பிழை",
+  "report.feedbackPrompt": "இந்த பகுப்பாய்வு பயனுள்ளதாக இருந்ததா?",
+  "report.feedbackHelpful": "பயனுள்ளது",
+  "report.feedbackNotHelpful": "பயனற்றது",
+  "report.feedbackCopy": "சுருக்கத்தை நகலெடு",
+  "report.feedbackReport": "அதிகாரிகளுக்கு புகாரளி",
+  "report.learnMore": "மேலும் அறிக",
+  "report.verificationResources": "சரிபார்ப்பு ஆதாரங்கள்:",
+  "report.shareTextPrefix": "தர்பன் AI பகுப்பாய்வு:",
+  "report.shareTextScore": "மதிப்பெண்",
+  "report.shareTextSummary": "சுருக்கம்",
+  "report.mailSubject": "சாத்தியமான தவறான தகவல் அறிக்கை - கேஸ் ஐடி: {{caseId}}",
+  "report.mailBody": "சைபர் கிரைம் செல் அவர்களுக்கு,\n\nசாத்தியமான தவறான தகவல் குறித்த மதிப்பாய்விற்காக இணைக்கப்பட்டுள்ள தர்பன் பகுப்பாய்வு அறிக்கையை (கேஸ் ஐடி: {{caseId}}) காணவும்.\n\nநம்பிக்கை மதிப்பெண்: {{score}}/100\nசுருக்கம்: {{summary}}\n\nநன்றி.",
+  
+  // -- PDF Report Keys --
+  "pdf.section.caseDetails": "வழக்கு விவரங்கள்",
+  "pdf.caseId": "கேஸ் ஐடி:",
+  "pdf.fileName": "கோப்பு பெயர்:",
+  "pdf.sha256": "SHA-256:",
+  "pdf.generated": "உருவாக்கப்பட்டது:",
+  "pdf.textInput": "உரை உள்ளீடு",
+  "pdf.section.aiSummary": "AI பகுப்பாய்வு சுருக்கம் (ஜெமினி)",
+  "pdf.section.contextMedia": "C.O.N.T.E.X.T. பகுப்பாய்வு காரணிகள் (மீடியா)",
+  "pdf.section.contextText": "C.O.N.T.E.X.T. பகுப்பாய்வு காரணிகள் (உரை)",
+  "pdf.section.textForensics": "உரை தடயவியல் சுருக்கம்",
+  "pdf.tfAiLikelihood": "AI வாய்ப்பு (ஹியூரிஸ்டிக்):",
+  "pdf.tfReadability": "படிக்க எளிதான தன்மை (ஃபிளெஷ்):",
+  "pdf.tfSentiment": "உணர்வு துருவமுனைப்பு:",
+  "pdf.tfSubjectivity": "தலைப்பட்சம்:",
+  "pdf.tfDiversity": "சொல் பன்முகத்தன்மை (TTR):",
+  "pdf.tfBurstiness": "திடீர் நிகழ்வு (மாறுபாடு ஹியூரிஸ்டிக்):",
+  "pdf.tfRepetition": "திரும்பத் திரும்ப வருதல் (டிரைகிராம் விகிதம்):",
+  "pdf.tfErrorPrefix": "உரை தடயவியல் பிழை",
+  "pdf.section.detailedForensics": "விரிவான தடயவியல் கண்டுபிடிப்புகள்",
+  "pdf.forensicErrorPrefix": "தடயவியல் சேவை பிழை",
+  "pdf.forensicErrorDetails": "விவரங்கள்",
+  "pdf.noDetails": "விவரங்கள் இல்லை.",
+  "pdf.subSection.scatter": "சிதறல் பகுப்பாய்வு",
+  "pdf.scatterSynthLikelihood": "செயற்கை வாய்ப்பு:",
+  "pdf.scatterEntropies": "என்ட்ரோபிகள் (R/G/B):",
+  "pdf.scatterCorrelations": "தொடர்புகள் (RG/RB/GB):",
+  "pdf.section.appendix": "பின் இணைப்பு: மூல தடயவியல் தரவு",
+  "pdf.subSection.metadata": "மெட்டாடேட்டா (ExifTool)",
+  "pdf.subSection.binary": "பைனரி அமைப்பு (Binwalk)",
+  "pdf.subSection.stego": "ஸ்டெகனோகிராபி (Steghide)",
+  "pdf.noExif": "ExifTool தரவு எதுவும் இல்லை.",
+  "pdf.noBinwalk": "Binwalk தரவு எதுவும் இல்லை.",
+  "pdf.noStego": "Steghide தரவு எதுவும் இல்லை.",
+  "pdf.noForensicData": "அறிக்கை பேலோடில் விரிவான தடயவியல் தரவு எதுவும் இல்லை.",
+  "pdf.section.digitalProvenance": "டிஜிட்டல் ப்ரோவெனன்ஸ்",
+  "pdf.subSection.webOrigin": "இணைய மூலம் (தலைகீழ் தேடல்)",
+  "pdf.prov.software": "எடிட்டிங் மென்பொருள்:",
+  "pdf.prov.make": "சாதனத் தயாரிப்பு:",
+  "pdf.prov.model": "சாதன மாடல்:",
+  "pdf.prov.suspicious": "சந்தேகத்திற்கிடமான குறிச்சொற்கள்:",
+  "pdf.noneDetected": "எதுவும் கண்டறியப்படவில்லை.",
+  "pdf.noExif": "படிக்கக்கூடிய EXIF ​​மெட்டாடேட்டா எதுவும் இல்லை.",
+  "pdf.prov.bestGuess": "சிறந்த யூகம் லேபிள்:",
+  "pdf.noGuess": "யூகம் எதுவும் இல்லை.",
+  "pdf.prov.firstSeen": "முதலில் இங்கு காணப்பட்டது:",
+  "pdf.notFound": "தெளிவான மூலம் எதுவும் இல்லை.",
+  "pdf.prov.matchingPages": "பொருந்தும் பக்கங்கள்:",
+  "pdf.noMatchingPages": "வேறு பக்கங்கள் எதுவும் இல்லை.",
+  
+  // -- Learn More Dialog --
+  "learnMore": {
+    "title": "ஆழ்ந்த ப்ரோவெனன்ஸ் அறிக்கை",
+    "description": "மீடியாவின் டிஜிட்டல் வரலாறு மற்றும் மெட்டாடேட்டாவின் விரிவான முறிவு.",
+    "webOriginTitle": "இணைய மூலம் (தலைகீழ் படத் தேடல்)",
+    "bestGuess": "சிறந்த யூகம் லேபிள்",
+    "firstSeen": "முதலில் இங்கு காணப்பட்டது (பழமையான அறியப்பட்ட மூலம்)",
+    "notFound": "தெளிவான மூலம் எதுவும் இல்லை.",
+    "matchingPages": "இந்தப் படத்தைப் பயன்படுத்தும் பிற பக்கங்கள்",
+    "noMatches": "இந்தப் படத்தைப் பயன்படுத்தும் வேறு பக்கங்கள் எதுவும் இல்லை.",
+    "metadataTitle": "பட மெட்டாடேட்டா (EXIF)",
+    "suspiciousTags": "சந்தேகத்திற்கிடமான மென்பொருள் குறிச்சொற்கள்",
+    "noneFound": "எதுவும் கண்டறியப்படவில்லை",
+    "allTags": "அனைத்து மூல மெட்டாடேட்டா",
+    "noMetadata": "இந்தக் கோப்பில் மெட்டாடேட்டா (EXIF) எதுவும் இல்லை. இது சமூக ஊடகப் படங்களில் பொதுவானது, ஏனெனில் அவை பெரும்பாலும் இந்தத் தரவை அகற்றிவிடும்."
+  },
+
+  // -- Toasts & Errors --
+  "toast.fileTooLarge": "கோப்பு அளவு பெரியது",
+  "toast.fileTooLargeDesc": "10MB-ஐ விட சிறிய கோப்பைத் தேர்ந்தெடுக்கவும்.",
+  "chat.attachImage": "படத்தை இணை",
+  "toast.micNotSupported": "மைக் ஆதரவில்லை",
+  "toast.micNotSupportedDesc": "உங்கள் உலாவியில் பேச்சு அறிதல் இல்லை.",
+  "toast.listening": "கேட்கிறது...",
+  "toast.micListeningDesc": "இப்போது பேசுங்கள், நிறுத்த மைக்கைக் கிளிக் செய்யவும்.",
+  "toast.micError": "மைக் பிழை",
+  "toast.micErrorDesc": "பேச்சு அறிதல் தோல்வியுற்றது. மீண்டும் முயற்சிக்கவும்.",
+  "toast.saveHistoryFail": "வரலாற்றைச் சேமிக்க முடியவில்லை",
+  "toast.loadedHistory": "வரலாற்றிலிருந்து ஏற்றப்பட்டது",
+  "toast.loadedHistoryDesc": "{{time}} இலிருந்து அறிக்கை காட்டப்படுகிறது",
+  "toast.analysisComplete": "பகுப்பாய்வு முடிந்தது",
+  "toast.analysisCompleteDesc": "நம்பிக்கை மதிப்பெண்: {{score}}/100",
+  "toast.analysisFailed": "பகுப்பாய்வு தோல்வியடைந்தது",
+  "toast.sessionReset": "அமர்வு மீட்டமைக்கப்பட்டது",
+  "toast.sessionResetDesc": "பகுப்பாய்வு மற்றும் வரலாறு அழிக்கப்பட்டது.",
+  "toast.noReportSelected": "அறிக்கை எதுவும் தேர்ந்தெடுக்கப்படவில்லை",
+  "toast.noReportSelectedDesc": "ஒரு பகுப்பாய்வை இயக்கவும் அல்லது வரலாற்றிலிருந்து ஒன்றைத் தேர்ந்தெடுக்கவும்.",
+  "toast.generatingPdf": "PDF அறிக்கை உருவாக்கப்படுகிறது...",
+  "toast.pleaseWait": "தயவுசெய்து காத்திருக்கவும்...",
+  "toast.pdfExported": "PDF அறிக்கை ஏற்றுமதி செய்யப்பட்டது",
+  "toast.pdfExportedDesc": "அறிக்கை வெற்றிகரமாகச் சேமிக்கப்பட்டது.",
+  "toast.exportFailed": "ஏற்றுமதி தோல்வியடைந்தது",
+  "toast.exportFailedDesc": "PDF ஐ உருவாக்கும்போது ஒரு பிழை ஏற்பட்டது.",
+  "toast.languageChanged": "மொழி மாற்றப்பட்டது",
+  "toast.languageChangedDesc": "இடைமுக மொழி {{lng}} ஆக அமைக்கப்பட்டது",
+  "toast.speechNotAvailable": "பேச்சு அம்சம் கிடைக்கவில்லை",
+  "toast.speechError": "பேச்சுப் பிழை",
+  "toast.feedbackSubmitted": "கருத்து சமர்ப்பிக்கப்பட்டது",
+  "toast.feedbackDesc": "தர்பன் AI ஐ மேம்படுத்த உதவியதற்கு நன்றி!",
+  "toast.copied": "கிளிப்போர்டுக்கு நகலெடுக்கப்பட்டது",
+  "toast.copyFailed": "நகலெடுப்பது தோல்வியடைந்தது",
+  "toast.reportSubmitted": "உள்ளடக்கம் புகாரளிக்கப்பட்டது",
+  "toast.reportDesc": "உங்கள் அறிக்கை மதிப்பாய்வுக்குச் சமர்ப்பிக்கப்பட்டது.",
+  "toast.reportFailed": "புகார் சமர்ப்பிப்பு தோல்வியடைந்தது",
+  "error.invalidReport": "சேவையகத்திலிருந்து தவறான அறிக்கை வடிவத்தைப் பெறப்பட்டது.",
+  "error.unknown": "அறியப்படாத பிழை ஏற்பட்டது.",
+  "error.analysisFailedPrefix": "பகுப்பாய்வு தோல்வியடைந்தது"
+};
+
+// --- BENGALI TRANSLATIONS ---
+const bnTranslation = {
+  // -- Welcome & "How to Use" -- (PLACEHOLDER: PLEASE TRANSLATE)
+  "welcome.title": "দর্পণ এআই ট্রাস্ট অ্যানালাইসিসে স্বাগতম", // Translated
+  "welcome.howToUse": "কিভাবে ব্যবহার করবেন", // Translated
+  "welcome.textTitle": "পাঠ্য বিশ্লেষণ (দাবি ও নিবন্ধের জন্য)", // Translated
+  "welcome.textStep1": "চ্যাটবক্সে আপনার পাঠ্য টাইপ করুন বা পেস্ট করুন (যেমন, \"5G কি COVID-19 ঘটায়?\")।", // Translated
+  "welcome.textStep2": "'প্রেরণ' (Send) বোতাম টিপুন।", // Translated
+  "welcome.textStep3": "6-ফ্যাক্টর C.O.N.T.E.X.T. রিপোর্ট পর্যালোচনা করুন।", // Translated
+  "welcome.imageTitle": "ছবি/মিডিয়া বিশ্লেষণ (ফটো ও মিমের জন্য)", // Translated
+  "welcome.imageStep1": "একটি ছবি সংযুক্ত করতে 'পেপারক্লিপ' আইকনে ক্লিক করুন।", // Translated
+  "welcome.imageStep2": "প্রস্তাবিত: ছবির দাবি ব্যাখ্যা করতে একটি পাঠ্য প্রম্পট যোগ করুন (যেমন, \"এটি কি আসল?\")।", // Translated
+  "welcome.imageStep3": "'প্রেরণ' (Send) টিপুন। 9-ফ্যাক্টর ফরেনসিক রিপোর্ট পর্যালোচনা করুন।", // Translated
+  "welcome.micTitle": "ভয়েস ইনপুট (বিটা)", // Translated
+  "welcome.micStep1": "'মাইক্রোফোন' আইকনে ক্লিক করুন।", // Translated
+  "welcome.micStep2": "অনুরোধ করা হলে ব্রাউজারের অনুমতি গ্রহণ করুন।", // Translated
+  "welcome.micStep3": "কথা বলা শুরু করুন। থামাতে আবার আইকনে ক্লিক করুন।", // Translated
+  "welcome.instruction": "শুরু করতে টেক্সট লিখুন, একটি URL পেস্ট করুন, বা একটি ছবি সংযুক্ত করুন।",
+  "welcome.history": "আপনার সেশন ইতিহাস বাম দিকে প্রদর্শিত হবে।",
+  
+  // -- Statuses --
+  "status.trustworthy": "নির্ভরযোগ্য",
+  "status.questionable": "সন্দেহজনক",
+  "status.notTrustworthy": "নির্ভরযোগ্য নয়",
+  "status.stanceHigh": "সঠিকতার উপর উচ্চ আস্থা",
+  "status.stanceMedium": "সম্ভাব্য ভুলত্রুটি সনাক্ত করা হয়েছে",
+  "status.stanceLow": "ভুল তথ্যের উচ্চ ঝুঁকি",
+  "sentiment.positive": "ইতিবাচক",
+  "sentiment.negative": "নেতিবাচক",
+  "sentiment.neutral": "নিরপেক্ষ",
+
+  // -- Header --
+  "header.analysisSession": "বিশ্লেষণ সেশন ({{count}}টি রিপোর্ট)",
+  "header.startAnalysis": "নতুন বিশ্লেষণ শুরু করুন",
+  "header.exportButton": "রিপোর্ট এক্সপোর্ট করুন",
+  "header.exportTooltip": "বর্তমানে দেখা রিপোর্ট এক্সপোর্ট করুন",
+  "header.exportDisabledTooltip": "এক্সপোর্ট সক্ষম করতে একটি বিশ্লেষণ চালান বা নির্বাচন করুন",
+  "header.resetButton": "সেশন রিসেট করুন",
+  "header.resetTooltip": "সেশন এবং ইতিহাস রিসেট করুন",
+  "header.resetDisabledTooltip": "রিসেট করার জন্য কোনো সেশন নেই",
+  
+  // -- Chat & History --
+  "chat.imageAttached": "ছবি সংযুক্ত করা হয়েছে",
+  "chat.placeholder": "আপনার দাবি টাইপ করুন, লিঙ্ক পেস্ট করুন, বা ছবি সংযুক্ত করুন...",
+  "history.textAnalysisDefaultName": "পাঠ্য বিশ্লেষণ",
+  "history.pastTime": "অতীত",
+
+  // -- Report Card (ChatMessage) --
+  "report.title": "ট্রাস্ট কম্পাস রিপোর্ট",
+  "report.ttsRead": "সারাংশ জোরে পড়ুন",
+  "report.ttsStop": "বলা বন্ধ করুন",
+  "report.stancePrefix": "অবস্থান",
+  "report.analysisSummary": "বিশ্লেষণ সারাংশ",
+  "report.contextTitle": "দর্পণ C.O.N.T.E.X.T. বিশ্লেষণ",
+  "report.textForensicsTitle": "🧠 টেক্সট ফরেনসিক সারাংশ",
+  "report.tfAiLikelihood": "AI সম্ভাবনা (হিউরিস্টিক):",
+  "report.tfReadability": "পাঠযোগ্যতা (ফ্লেশ):",
+  "report.tfSentiment": "অনুভূতির মেরুতা:",
+  "report.tfSubjectivity": "বিষয়বস্তু:",
+  "report.tfDiversity": "আভিধানিক বৈচিত্র্য (TTR):",
+  "report.tfErrorTitle": "⚠️ টেক্সট ফরেনসিক ত্রুটি",
+  "report.feedbackPrompt": "এই বিশ্লেষণটি কি সহায়ক ছিল?",
+  "report.feedbackHelpful": "সহায়ক",
+  "report.feedbackNotHelpful": "সহায়ক নয়",
+  "report.feedbackCopy": "সারাংশ কপি করুন",
+  "report.feedbackReport": "কর্তৃপক্ষকে রিপোর্ট করুন",
+  "report.learnMore": "আরও জানুন",
+  "report.verificationResources": "যাচাইকরণ সম্পদ:",
+  "report.shareTextPrefix": "দর্পণ এআই বিশ্লেষণ:",
+  "report.shareTextScore": "স্কোর",
+  "report.shareTextSummary": "সারাংশ",
+  "report.mailSubject": "সম্ভাব্য ভুল তথ্যের রিপোর্ট - কেস আইডি: {{caseId}}",
+  "report.mailBody": "সাইবার ক্রাইম সেল,\n\nঅনুগ্রহ করে সম্ভাব্য ভুল তথ্য পর্যালোচনার জন্য সংযুক্ত দর্পণ বিশ্লেষণ প্রতিবেদনটি (কেস আইডি: {{caseId}}) খুঁজুন।\n\nট্রাস্ট স্কোর: {{score}}/100\nসারাংশ: {{summary}}\n\nধন্যবাদ।",
+  
+  // -- PDF Report Keys --
+  "pdf.section.caseDetails": "কেসের বিবরণ",
+  "pdf.caseId": "কেস আইডি:",
+  "pdf.fileName": "ফাইলের নাম:",
+  "pdf.sha256": "SHA-256:",
+  "pdf.generated": "জেনারেট করা হয়েছে:",
+  "pdf.textInput": "পাঠ্য ইনপুট",
+  "pdf.section.aiSummary": "এআই বিশ্লেষণ সারাংশ (জেমিনি)",
+  "pdf.section.contextMedia": "C.O.N.T.E.X.T. বিশ্লেষণ ফ্যাক্টর (মিডিয়া)",
+  "pdf.section.contextText": "C.O.N.T.E.X.T. বিশ্লেষণ ফ্যাক্টর (পাঠ্য)",
+  "pdf.section.textForensics": "টেক্সট ফরেনসিক সারাংশ",
+  "pdf.tfAiLikelihood": "AI সম্ভাবনা (হিউরিস্টিক):",
+  "pdf.tfReadability": "পাঠযোগ্যতা (ফ্লেশ):",
+  "pdf.tfSentiment": "অনুভূতির মেরুতা:",
+  "pdf.tfSubjectivity": "বিষয়বস্তু:",
+  "pdf.tfDiversity": "আভিধানিক বৈচিত্র্য (TTR):",
+  "pdf.tfBurstiness": "বার্স্টিনেস (ভ্যারিয়েন্স হিউরিস্টিক):",
+  "pdf.tfRepetition": "পুনরাবৃত্তি (ট্রাইগ্রাম অনুপাত):",
+  "pdf.tfErrorPrefix": "টেক্সট ফরেনসিক ত্রুটি",
+  "pdf.section.detailedForensics": "বিস্তারিত ফরেনসিক ফাইন্ডিং",
+  "pdf.forensicErrorPrefix": "ফরেনসিক পরিষেবা ত্রুটি",
+  "pdf.forensicErrorDetails": "বিস্তারিত",
+  "pdf.noDetails": "কোনো বিবরণ নেই।",
+  "pdf.subSection.scatter": "স্ক্যাটার বিশ্লেষণ",
+  "pdf.scatterSynthLikelihood": "সিনথেটিক সম্ভাবনা:",
+  "pdf.scatterEntropies": "এনট্রপি (R/G/B):",
+  "pdf.scatterCorrelations": "পারস্পরিক সম্পর্ক (RG/RB/GB):",
+  "pdf.section.appendix": "পরিশিষ্ট: কাঁচা ফরেনসিক ডেটা",
+  "pdf.subSection.metadata": "মেটাডেটা (ExifTool)",
+  "pdf.subSection.binary": "বাইনারি কাঠামো (Binwalk)",
+  "pdf.subSection.stego": "স্টেগানোগ্রাফি (Steghide)",
+  "pdf.noExif": "কোনো ExifTool ডেটা পাওয়া যায়নি।",
+  "pdf.noBinwalk": "কোনো Binwalk ডেটা পাওয়া যায়নি।",
+  "pdf.noStego": "কোনো Steghide ডেটা পাওয়া যায়নি।",
+  "pdf.noForensicData": "রিপোর্ট পেলোডে কোনো বিস্তারিত ফরেনসিক ডেটা পাওয়া যায়নি।",
+  "pdf.section.digitalProvenance": "ডিজিটাল প্রোভেন্যান্স",
+  "pdf.subSection.webOrigin": "ওয়েব উৎস (রিভার্স সার্চ)",
+  "pdf.prov.software": "এডিটিং সফটওয়্যার:",
+  "pdf.prov.make": "ডিভাইস মেক:",
+  "pdf.prov.model": "ডিভাইস মডেল:",
+  "pdf.prov.suspicious": "সন্দেহজনক ট্যাগ:",
+  "pdf.noneDetected": "কোনোটি সনাক্ত করা যায়নি।",
+  "pdf.noExif": "কোনো পঠনযোগ্য EXIF মেটাডেটা পাওয়া যায়নি।",
+  "pdf.prov.bestGuess": "সেরা অনুমান লেবেল:",
+  "pdf.noGuess": "কোনো অনুমান উপলব্ধ নেই।",
+  "pdf.prov.firstSeen": "প্রথম দেখা গেছে:",
+  "pdf.notFound": "কোনো স্পষ্ট উৎস পাওয়া যায়নি।",
+  "pdf.prov.matchingPages": "মিলিত পৃষ্ঠা:",
+  "pdf.noMatchingPages": "অন্য কোনো পৃষ্ঠা পাওয়া যায়নি।",
+  
+  // -- Learn More Dialog --
+  "learnMore": {
+    "title": "গভীর প্রোভেন্যান্স রিপোর্ট",
+    "description": "মিডিয়ার ডিজিটাল ইতিহাস এবং মেটাডেটার একটি বিস্তারিত বিবরণ।",
+    "webOriginTitle": "ওয়েব উৎস (রিভার্স ইমেজ সার্চ)",
+    "bestGuess": "সেরা অনুমান লেবেল",
+    "firstSeen": "প্রথম দেখা গেছে (প্রাচীনতম পরিচিত উৎস)",
+    "notFound": "কোনো স্পষ্ট উৎস পাওয়া যায়নি।",
+    "matchingPages": "এই ছবিটি ব্যবহার করা অন্যান্য পৃষ্ঠা",
+    "noMatches": "এই ছবিটি ব্যবহার করা অন্য কোনো পৃষ্ঠা পাওয়া যায়নি।",
+    "metadataTitle": "ছবির মেটাডেটা (EXIF)",
+    "suspiciousTags": "সন্দেহজনক সফটওয়্যার ট্যাগ",
+    "noneFound": "কোনোটি সনাক্ত করা যায়নি",
+    "allTags": "সমস্ত কাঁচা মেটাডেটা",
+    "noMetadata": "এই ফাইলে কোনো মেটাডেটা (EXIF) পাওয়া যায়নি। এটি সোশ্যাল মিডিয়া থেকে ছবিতে সাধারণ, কারণ তারা প্রায়ই এই ডেটা মুছে ফেলে।"
+  },
+
+  // -- Toasts & Errors --
+  "toast.fileTooLarge": "ফাইলের আকার বড়",
+  "toast.fileTooLargeDesc": "অনুগ্রহ করে 10MB এর চেয়ে ছোট ফাইল নির্বাচন করুন।",
+  "chat.attachImage": "ছবি সংযুক্ত করুন",
+  "toast.micNotSupported": "মাইক সমর্থিত নয়",
+  "toast.micNotSupportedDesc": "আপনার ব্রাউজার স্পিচ রিকগনিশন সমর্থন করে না।",
+  "toast.listening": "শুনছি...",
+  "toast.micListeningDesc": "এখন কথা বলুন, থামাতে মাইকে ক্লিক করুন।",
+  "toast.micError": "মাইক ত্রুটি",
+  "toast.micErrorDesc": "স্পিচ রিকগনিশন ব্যর্থ হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।",
+  "toast.saveHistoryFail": "ইতিহাস সংরক্ষণ করতে ব্যর্থ",
+  "toast.loadedHistory": "ইতিহাস থেকে লোড করা হয়েছে",
+  "toast.loadedHistoryDesc": "{{time}} থেকে রিপোর্ট প্রদর্শন করা হচ্ছে",
+  "toast.analysisComplete": "বিশ্লেষণ সম্পন্ন",
+  "toast.analysisCompleteDesc": "ট্রাস্ট স্কোর: {{score}}/100",
+  "toast.analysisFailed": "বিশ্লেষণ ব্যর্থ",
+  "toast.sessionReset": "সেশন রিসেট",
+  "toast.sessionResetDesc": "বিশ্লেষণ এবং ইতিহাস মুছে ফেলা হয়েছে।",
+  "toast.noReportSelected": "কোনো রিপোর্ট নির্বাচন করা হয়নি",
+  "toast.noReportSelectedDesc": "একটি বিশ্লেষণ চালান বা ইতিহাস থেকে একটি নির্বাচন করুন।",
+  "toast.generatingPdf": "পিডিএফ রিপোর্ট তৈরি করা হচ্ছে...",
+  "toast.pleaseWait": "অনুগ্রহ করে অপেক্ষা করুন...",
+  "toast.pdfExported": "পিডিএফ রিপোর্ট এক্সপোর্ট করা হয়েছে",
+  "toast.pdfExportedDesc": "রিপোর্ট সফলভাবে সংরক্ষণ করা হয়েছে।",
+  "toast.exportFailed": "এক্সপোর্ট ব্যর্থ",
+  "toast.exportFailedDesc": "পিডিএফ তৈরি করার সময় একটি ত্রুটি ঘটেছে।",
+  "toast.languageChanged": "ভাষা পরিবর্তিত হয়েছে",
+  "toast.languageChangedDesc": "ইন্টারফেসের ভাষা {{lng}} তে সেট করা হয়েছে",
+  "toast.speechNotAvailable": "বক্তৃতা উপলব্ধ নয়",
+  "toast.speechError": "বক্তৃতা ত্রুটি",
+  "toast.feedbackSubmitted": "মতামত জমা দেওয়া হয়েছে",
+  "toast.feedbackDesc": "দর্পণ এআই উন্নত করতে সাহায্য করার জন্য ধন্যবাদ!",
+  "toast.copied": "ক্লিপবোর্ডে কপি করা হয়েছে",
+  "toast.copyFailed": "কপি ব্যর্থ",
+  "toast.reportSubmitted": "বিষয়বস্তু রিপোর্ট করা হয়েছে",
+  "toast.reportDesc": "আপনার রিপোর্ট পর্যালোচনার জন্য জমা দেওয়া হয়েছে।",
+  "toast.reportFailed": "রিপোর্ট জমা ব্যর্থ",
+  "error.invalidReport": "সার্ভার থেকে অবৈধ রিপোর্ট ফর্ম্যাট প্রাপ্ত হয়েছে।",
+  "error.unknown": "একটি অজানা ত্রুটি ঘটেছে।",
+  "error.analysisFailedPrefix": "বিশ্লেষণ ব্যর্থ"
+};
+
+// --- MARATHI TRANSLATIONS ---
+const mrTranslation = {
+  // -- Welcome & "How to Use" -- (PLACEHOLDER: PLEASE TRANSLATE)
+  "welcome.title": "दर्पण AI ट्रस्ट विश्लेषणात आपले स्वागत आहे", // Translated
+  "welcome.howToUse": "कसे वापरावे", // Translated
+  "welcome.textTitle": "मजकूर विश्लेषण (दावे आणि लेखांसाठी)", // Translated
+  "welcome.textStep1": "तुमचा मजकूर चॅटबॉक्समध्ये टाइप करा किंवा पेस्ट करा (उदा., \"5G मुळे COVID-19 होतो का?\").", // Translated
+  "welcome.textStep2": "'पाठवा' (Send) बटण दाबा.", // Translated
+  "welcome.textStep3": "6-घटक C.O.N.T.E.X.T. अहवालाचे पुनरावलोकन करा.", // Translated
+  "welcome.imageTitle": "प्रतिमा/मीडिया विश्लेषण (फोटो आणि मीम्ससाठी)", // Translated
+  "welcome.imageStep1": "प्रतिमा संलग्न करण्यासाठी 'पेपरक्लिप' चिन्हावर क्लिक करा.", // Translated
+  "welcome.imageStep2": "शिफारस केलेले: प्रतिमेचा दावा स्पष्ट करण्यासाठी मजकूर प्रॉम्प्ट जोडा (उदा., \"हे खरे आहे का?\").", // Translated
+  "welcome.imageStep3": "'पाठवा' (Send) दाबा. 9-घटक फॉरेन्सिक अहवालाचे पुनरावलोकन करा.", // Translated
+  "welcome.micTitle": "व्हॉइस इनपुट (बीटा)", // Translated
+  "welcome.micStep1": "'मायक्रोफोन' चिन्हावर क्लिक करा.", // Translated
+  "welcome.micStep2": "सूचित केल्यावर ब्राउझर परवानगी स्वीकारा.", // Translated
+  "welcome.micStep3": "बोलणे सुरू करा. थांबण्यासाठी चिन्ह पुन्हा क्लिक करा.", // Translated
+  "welcome.instruction": "सुरुवात करण्यासाठी मजकूर प्रविष्ट करा, URL पेस्ट करा, किंवा एक प्रतिमा संलग्न करा.",
+  "welcome.history": "तुमचा सत्र इतिहास डावीकडे दिसेल.",
+
+  // -- Statuses --
+  "status.trustworthy": "विश्वासार्ह",
+  "status.questionable": "संशयास्पद",
+  "status.notTrustworthy": "विश्वासार्ह नाही",
+  "status.stanceHigh": "अचूकतेवर उच्च विश्वास",
+  "status.stanceMedium": "संभाव्य अयोग्यता आढळल्या",
+  "status.stanceLow": "चुकीच्या माहितीचा उच्च धोका",
+  "sentiment.positive": "सकारात्मक",
+  "sentiment.negative": "नकारात्मक",
+  "sentiment.neutral": "तटस्थ",
+  
+  // -- Header --
+  "header.analysisSession": "विश्लेषण सत्र ({{count}} अहवाल)",
+  "header.startAnalysis": "नवीन विश्लेषण सुरू करा",
+  "header.exportButton": "अहवाल निर्यात करा",
+  "header.exportTooltip": "सध्या पाहत असलेला अहवाल निर्यात करा",
+  "header.exportDisabledTooltip": "निर्यात सक्षम करण्यासाठी विश्लेषण चालवा किंवा निवडा",
+  "header.resetButton": "सत्र रीसेट करा",
+  "header.resetTooltip": "सत्र आणि इतिहास रीसेट करा",
+  "header.resetDisabledTooltip": "रीसेट करण्यासाठी कोणतेही सत्र नाही",
+  
+  // -- Chat & History --
+  "chat.imageAttached": "प्रतिमा संलग्न केली आहे",
+  "chat.placeholder": "तुमचा दावा टाइप करा, लिंक पेस्ट करा किंवा प्रतिमा संलग्न करा...",
+  "history.textAnalysisDefaultName": "मजकूर विश्लेषण",
+  "history.pastTime": "भूतकाळ",
+
+  // -- Report Card (ChatMessage) --
+  "report.title": "ट्रस्ट कंपास अहवाल",
+  "report.ttsRead": "सारांश मोठ्याने वाचा",
+  "report.ttsStop": "बोलणे थांबवा",
+  "report.stancePrefix": "भूमिका",
+  "report.analysisSummary": "विश्लेषण सारांश",
+  "report.contextTitle": "दर्पण C.O.N.T.E.X.T. विश्लेषण",
+  "report.textForensicsTitle": "🧠 मजकूर फोरेन्सिक्स सारांश",
+  "report.tfAiLikelihood": "AI शक्यता (ह्युरिस्टिक):",
+  "report.tfReadability": "वाचनक्षमता (फ्लेश):",
+  "report.tfSentiment": "भावना ध्रुवीयता:",
+  "report.tfSubjectivity": "व्यक्तिनिष्ठता:",
+  "report.tfDiversity": "शाब्दिक विविधता (TTR):",
+  "report.tfErrorTitle": "⚠️ मजकूर फोरेन्सिक्स त्रुटी",
+  "report.feedbackPrompt": "हे विश्लेषण उपयुक्त होते का?",
+  "report.feedbackHelpful": "उपयुक्त",
+  "report.feedbackNotHelpful": "उपयुक्त नाही",
+  "report.feedbackCopy": "सारांश कॉपी करा",
+  "report.feedbackReport": "अधिकाऱ्यांना तक्रार करा",
+  "report.learnMore": "अधिक जाणून घ्या",
+  "report.verificationResources": "पडताळणी संसाधने:",
+  "report.shareTextPrefix": "दर्पण AI विश्लेषण:",
+  "report.shareTextScore": "स्कोअर",
+  "report.shareTextSummary": "सारांश",
+  "report.mailSubject": "संभाव्य चुकीच्या माहितीचा अहवाल - केस आयडी: {{caseId}}",
+  "report.mailBody": "सायबर क्राईम सेल,\n\nकृपया संभाव्य चुकीच्या माहितीच्या पुनरावलोकनासाठी सोबत जोडलेला दर्पण विश्लेषण अहवाल (केस आयडी: {{caseId}}) पहा.\n\nट्रस्ट स्कोअर: {{score}}/100\nसारांश: {{summary}}\n\nधन्यवाद.",
+  
+  // -- PDF Report Keys --
+  "pdf.section.caseDetails": "केस तपशील",
+  "pdf.caseId": "केस आयडी:",
+  "pdf.fileName": "फाईलचे नाव:",
+  "pdf.sha256": "SHA-256:",
+  "pdf.generated": "व्युत्पन्न:",
+  "pdf.textInput": "मजकूर इनपुट",
+  "pdf.section.aiSummary": "AI विश्लेषण सारांश (जेमिनी)",
+  "pdf.section.contextMedia": "C.O.N.T.E.X.T. विश्लेषण घटक (मीडिया)",
+  "pdf.section.contextText": "C.O.N.T.E.X.T. विश्लेषण घटक (मजकूर)",
+  "pdf.section.textForensics": "मजकूर फोरेन्सिक्स सारांश",
+  "pdf.tfAiLikelihood": "AI शक्यता (ह्युरिस्टिक):",
+  "pdf.tfReadability": "वाचनक्षमता (फ्लेश):",
+  "pdf.tfSentiment": "भावना ध्रुवीयता:",
+  "pdf.tfSubjectivity": "व्यक्तिनिष्ठता:",
+  "pdf.tfDiversity": "शाब्दिक विविधता (TTR):",
+  "pdf.tfBurstiness": "बर्स्टिनेस (व्हेरियन्स ह्युरिस्टिक):",
+  "pdf.tfRepetition": "पुनरावृत्ती (ट्रायग्राम गुणोत्तर):",
+  "pdf.tfErrorPrefix": "मजकूर फोरेन्सिक्स त्रुटी",
+  "pdf.section.detailedForensics": "तपशीलवार फोरेन्सिक्स निष्कर्ष",
+  "pdf.forensicErrorPrefix": "फोरेन्सिक्स सेवा त्रुटी",
+  "pdf.forensicErrorDetails": "तपशील",
+  "pdf.noDetails": "तपशील नाहीत.",
+  "pdf.subSection.scatter": "स्कॅटर विश्लेषण",
+  "pdf.scatterSynthLikelihood": "सिंथेटिक शक्यता:",
+  "pdf.scatterEntropies": "एन्ट्रॉपी (R/G/B):",
+  "pdf.scatterCorrelations": "सहसंबंध (RG/RB/GB):",
+  "pdf.section.appendix": "परिशिष्ट: रॉ फोरेन्सिक्स डेटा",
+  "pdf.subSection.metadata": "मेटाडेटा (ExifTool)",
+  "pdf.subSection.binary": "बायनरी संरचना (Binwalk)",
+  "pdf.subSection.stego": "स्टेगनोग्राफी (Steghide)",
+  "pdf.noExif": "ExifTool डेटा आढळला नाही.",
+  "pdf.noBinwalk": "Binwalk डेटा आढळला नाही.",
+  "pdf.noStego": "Steghide डेटा आढळला नाही.",
+  "pdf.noForensicData": "अहवाल पेलोडमध्ये कोणताही तपशीलवार फोरेन्सिक्स डेटा आढळला नाही.",
+  "pdf.section.digitalProvenance": "डिजिटल प्रोव्हेनन्स",
+  "pdf.subSection.webOrigin": "वेब मूळ (रिव्हर्स शोध)",
+  "pdf.prov.software": "संपादन सॉफ्टवेअर:",
+  "pdf.prov.make": "डिव्हाइस मेक:",
+  "pdf.prov.model": "डिव्हाइस मॉडेल:",
+  "pdf.prov.suspicious": "संशयास्पद टॅग्ज:",
+  "pdf.noneDetected": "काहीही आढळले नाही.",
+  "pdf.noExif": "वाचनीय EXIF मेटाडेटा आढळला नाही.",
+  "pdf.prov.bestGuess": "सर्वोत्तम अंदाज लेबल:",
+  "pdf.noGuess": "कोणताही अंदाज उपलब्ध नाही.",
+  "pdf.prov.firstSeen": "प्रथम येथे पाहिले:",
+  "pdf.notFound": "कोणतेही स्पष्ट मूळ आढळले नाही.",
+  "pdf.prov.matchingPages": "जुळणारी पृष्ठे:",
+  "pdf.noMatchingPages": "इतर कोणतीही पृष्ठे आढळली नाहीत.",
+  
+  // -- Learn More Dialog --
+  "learnMore": {
+    "title": "सखोल प्रोव्हेनन्स अहवाल",
+    "description": "मीडियाचा डिजिटल इतिहास आणि मेटाडेटाचा तपशीलवार आढावा.",
+    "webOriginTitle": "वेब मूळ (रिव्हर्स प्रतिमा शोध)",
+    "bestGuess": "सर्वोत्तम अंदाज लेबल",
+    "firstSeen": "प्रथम येथे पाहिले (सर्वात जुना ज्ञात स्रोत)",
+    "notFound": "कोणतेही स्पष्ट मूळ आढळले नाही.",
+    "matchingPages": "ही प्रतिमा वापरणारी इतर पृष्ठे",
+    "noMatches": "ही प्रतिमा वापरणारी इतर कोणतीही पृष्ठे आढळली नाहीत.",
+    "metadataTitle": "प्रतिमा मेटाडेटा (EXIF)",
+    "suspiciousTags": "संशयास्पद सॉफ्टवेअर टॅग्ज",
+    "noneFound": "काहीही आढळले नाही",
+    "allTags": "सर्व रॉ मेटाडेटा",
+    "noMetadata": "या फाईलमध्ये कोणताही मेटाडेटा (EXIF) आढळला नाही. सोशल मीडियावरील प्रतिमांमध्ये हे सामान्य आहे, कारण ते बऱ्याचदा हा डेटा काढून टाकतात."
+  },
+
+  // -- Toasts & Errors --
+  "toast.fileTooLarge": "फाइल खूप मोठी आहे",
+  "toast.fileTooLargeDesc": "कृपया 10MB पेक्षा लहान फाइल निवडा.",
+  "chat.attachImage": "प्रतिमा संलग्न करा",
+  "toast.micNotSupported": "माइक समर्थित नाही",
+  "toast.micNotSupportedDesc": "तुमचा ब्राउझर स्पीच रेकग्निशनला सपोर्ट करत नाही.",
+  "toast.listening": "ऐकत आहे...",
+  "toast.micListeningDesc": "आता बोला, थांबण्यासाठी माइकवर क्लिक करा.",
+  "toast.micError": "माइक त्रुटी",
+  "toast.micErrorDesc": "स्पीच रेकग्निशन अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+  "toast.saveHistoryFail": "इतिहास जतन करण्यात अयशस्वी",
+  "toast.loadedHistory": "इतिहासातून लोड केले",
+  "toast.loadedHistoryDesc": "{{time}} पासून अहवाल प्रदर्शित करत आहे",
+  "toast.analysisComplete": "विश्लेषण पूर्ण",
+  "toast.analysisCompleteDesc": "ट्रस्ट स्कोअर: {{score}}/100",
+  "toast.analysisFailed": "विश्लेषण अयशस्वी",
+  "toast.sessionReset": "सत्र रीसेट",
+  "toast.sessionResetDesc": "विश्लेषण आणि इतिहास साफ केला.",
+  "toast.noReportSelected": "कोणताही अहवाल निवडलेला नाही",
+  "toast.noReportSelectedDesc": "विश्लेषण चालवा किंवा इतिहासातून एक निवडा.",
+  "toast.generatingPdf": "PDF अहवाल तयार करत आहे...",
+  "toast.pleaseWait": "कृपया प्रतीक्षा करा...",
+  "toast.pdfExported": "PDF अहवाल निर्यात केला",
+  "toast.pdfExportedDesc": "अहवाल यशस्वीरित्या जतन केला.",
+  "toast.exportFailed": "निर्यात अयशस्वी",
+  "toast.exportFailedDesc": "PDF तयार करताना त्रुटी आली.",
+  "toast.languageChanged": "भाषा बदलली",
+  "toast.languageChangedDesc": "इंटरफेस भाषा {{lng}} वर सेट केली आहे",
+  "toast.speechNotAvailable": "स्पीच उपलब्ध नाही",
+  "toast.speechError": "स्पीच त्रुटी",
+  "toast.feedbackSubmitted": "अभिप्राय सबमिट केला",
+  "toast.feedbackDesc": "दर्पण AI सुधारण्यात मदत केल्याबद्दल धन्यवाद!",
+  "toast.copied": "क्लिपबोर्डवर कॉपी केले",
+  "toast.copyFailed": "कॉपी अयशस्वी",
+  "toast.reportSubmitted": "सामग्री तक्रार केली",
+  "toast.reportDesc": "तुमचा अहवाल पुनरावलोकनासाठी सबमिट केला आहे.",
+  "toast.reportFailed": "अहवाल सबमिशन अयशस्वी",
+  "error.invalidReport": "सर्व्हरवरून अवैध अहवाल स्वरूप प्राप्त झाला.",
+  "error.unknown": "अज्ञात त्रुटी आली.",
+  "error.analysisFailedPrefix": "विश्लेषण अयशस्वी"
+};
+
+// --- KANNADA TRANSLATIONS ---
+const knTranslation = {
+  // -- Welcome & "How to Use" -- (PLACEHOLDER: PLEASE TRANSLATE)
+  "welcome.title": "ದರ್ಪಣ್ AI ಟ್ರಸ್ಟ್ ವಿಶ್ಲೇಷಣೆಗೆ ಸುಸ್ವಾಗತ", // Translated
+  "welcome.howToUse": "ಬಳಸುವುದು ಹೇಗೆ", // Translated
+  "welcome.textTitle": "ಪಠ್ಯ ವಿಶ್ಲೇಷಣೆ (ಹಕ್ಕುಗಳು ಮತ್ತು ಲೇಖನಗಳಿಗಾಗಿ)", // Translated
+  "welcome.textStep1": "ನಿಮ್ಮ ಪಠ್ಯವನ್ನು ಟೈಪ್ ಮಾಡಿ (ಉದಾ., \"5G COVID-19 ಗೆ ಕಾರಣವಾಗುತ್ತದೆಯೇ?\") ಚಾಟ್‌ಬಾಕ್ಸ್‌ನಲ್ಲಿ.", // Translated
+  "welcome.textStep2": "'ಕಳುಹಿಸು' (Send) ಬಟನ್ ಒತ್ತಿರಿ.", // Translated
+  "welcome.textStep3": "6-ಅಂಶ C.O.N.T.E.X.T. ವರದಿಯನ್ನು ಪರಿಶೀಲಿಸಿ.", // Translated
+  "welcome.imageTitle": "ಚಿತ್ರ/ಮಾಧ್ಯಮ ವಿಶ್ಲೇಷಣೆ (ಫೋಟೋಗಳು ಮತ್ತು ಮೀಮ್‌ಗಳಿಗಾಗಿ)", // Translated
+  "welcome.imageStep1": "ಚಿತ್ರವನ್ನು ಲಗತ್ತಿಸಲು 'ಪೇಪರ್‌ಕ್ಲಿಪ್' ಐಕಾನ್ ಕ್ಲಿಕ್ ಮಾಡಿ.", // Translated
+  "welcome.imageStep2": "ಶಿಫಾರಸು: ಚಿತ್ರದ ಹಕ್ಕನ್ನು ವಿವರಿಸಲು ಪಠ್ಯ ಪ್ರಾಂಪ್ಟ್ ಸೇರಿಸಿ (ಉದಾ., \"ಇದು ನಿಜವೇ?\").", // Translated
+  "welcome.imageStep3": "'ಕಳುಹಿಸು' (Send) ಒತ್ತಿರಿ. 9-ಅಂಶ ವಿಧಿವಿಜ್ಞಾನ ವರದಿಯನ್ನು ಪರಿಶೀಲಿಸಿ.", // Translated
+  "welcome.micTitle": "ಧ್ವನಿ ಇನ್‌ಪುಟ್ (ಬೀಟಾ)", // Translated
+  "welcome.micStep1": "'ಮೈಕ್ರೊಫೋನ್' ಐಕಾನ್ ಕ್ಲಿಕ್ ಮಾಡಿ.", // Translated
+  "welcome.micStep2": "ಪ್ರಾಂಪ್ಟ್ ಮಾಡಿದಾಗ ಬ್ರೌಸರ್ ಅನುಮತಿಯನ್ನು ಸ್ವೀಕರಿಸಿ.", // Translated
+  "welcome.micStep3": "ಮಾತನಾಡಲು ಪ್ರಾರಂಭಿಸಿ. ನಿಲ್ಲಿಸಲು ಮತ್ತೆ ಐಕಾನ್ ಕ್ಲಿಕ್ ಮಾಡಿ.", // Translated
+  "welcome.instruction": "ಪ್ರಾರಂಭಿಸಲು ಪಠ್ಯವನ್ನು ನಮೂದಿಸಿ, URL ಅನ್ನು ಅಂಟಿಸಿ, ಅಥವಾ ಚಿತ್ರವನ್ನು ಲಗತ್ತಿಸಿ.",
+  "welcome.history": "ನಿಮ್ಮ ಸೆಷನ್ ಇತಿಹಾಸವು ಎಡಭಾಗದಲ್ಲಿ ಕಾಣಿಸುತ್ತದೆ.",
+  
+  // -- Statuses --
+  "status.trustworthy": "ವಿಶ್ವಾಸಾರ್ಹ",
+  "status.questionable": "ಪ್ರಶ್ನಾರ್ಹ",
+  "status.notTrustworthy": "ವಿಶ್ವಾಸಾರ್ಹವಲ್ಲ",
+  "status.stanceHigh": "ನಿಖರತೆಯ ಬಗ್ಗೆ ಹೆಚ್ಚಿನ ವಿಶ್ವಾಸ",
+  "status.stanceMedium": "ಸಂಭಾವ್ಯ ತಪ್ಪುಗಳನ್ನು ಪತ್ತೆಹಚ್ಚಲಾಗಿದೆ",
+  "status.stanceLow": "ತಪ್ಪು ಮಾಹಿತಿಯ ಹೆಚ್ಚಿನ ಅಪಾಯ",
+  "sentiment.positive": "ಸಕಾರಾತ್ಮಕ",
+  "sentiment.negative": "ನಕಾರಾತ್ಮಕ",
+  "sentiment.neutral": "ತಟಸ್ಥ",
+  
+  // -- Header --
+  "header.analysisSession": "ವಿಶ್ಲೇಷಣೆ ಸೆಷನ್ ({{count}} ವರದಿಗಳು)",
+  "header.startAnalysis": "ಹೊಸ ವಿಶ್ಲೇಷಣೆ ಪ್ರಾರಂಭಿಸಿ",
+  "header.exportButton": "ವರದಿಯನ್ನು ರಫ್ತು ಮಾಡಿ",
+  "header.exportTooltip": "ಪ್ರಸ್ತುತ ವೀಕ್ಷಿಸುತ್ತಿರುವ ವರದಿಯನ್ನು ರಫ್ತು ಮಾಡಿ",
+  "header.exportDisabledTooltip": "ರಫ್ತು ಮಾಡಲು ವಿಶ್ಲೇಷಣೆಯನ್ನು ರನ್ ಮಾಡಿ ಅಥವಾ ಆಯ್ಕೆಮಾಡಿ",
+  "header.resetButton": "ಸೆಷನ್ ಮರುಹೊಂದಿಸಿ",
+  "header.resetTooltip": "ಸೆಷನ್ ಮತ್ತು ಇತಿಹಾಸವನ್ನು ಮರುಹೊಂದಿಸಿ",
+  "header.resetDisabledTooltip": "ಮರುಹೊಂದಿಸಲು ಯಾವುದೇ ಸೆಷನ್ ಇಲ್ಲ",
+  
+  // -- Chat & History --
+  "chat.imageAttached": "ಚಿತ್ರವನ್ನು ಲಗತ್ತಿಸಲಾಗಿದೆ",
+  "chat.placeholder": "ನಿಮ್ಮ ಹಕ್ಕನ್ನು ಟೈಪ್ ಮಾಡಿ, ಲಿಂಕ್ ಅಂಟಿಸಿ, ಅಥವಾ ಚಿತ್ರವನ್ನು ಲಗತ್ತಿಸಿ...",
+  "history.textAnalysisDefaultName": "ಪಠ್ಯ ವಿಶ್ಲೇಷಣೆ",
+  "history.pastTime": "ಹಿಂದಿನ",
+
+  // -- Report Card (ChatMessage) --
+  "report.title": "ಟ್ರಸ್ಟ್ ಕಂಪಾಸ್ ವರದಿ",
+  "report.ttsRead": "ಸಾರಾಂಶವನ್ನು ಗಟ್ಟಿಯಾಗಿ ಓದಿ",
+  "report.ttsStop": "ಮಾತನಾಡುವುದನ್ನು ನಿಲ್ಲಿಸಿ",
+  "report.stancePrefix": "ನಿಲುವು",
+  "report.analysisSummary": "ವಿಶ್ಲೇಷಣೆ ಸಾರಾಂಶ",
+  "report.contextTitle": "ದರ್ಪಣ್ C.O.N.T.E.X.T. ವಿಶ್ಲೇಷಣೆ",
+  "report.textForensicsTitle": "🧠 ಪಠ್ಯ ವಿಧಿವಿಜ್ಞಾನ ಸಾರಾಂಶ",
+  "report.tfAiLikelihood": "AI ಸಂಭವನೀಯತೆ (ಹ್ಯೂರಿಸ್ಟಿಕ್):",
+  "report.tfReadability": "ಓದುವಿಕೆ (ಫ್ಲೆಶ್):",
+  "report.tfSentiment": "ಭಾವನೆ ಧ್ರುವೀಯತೆ:",
+  "report.tfSubjectivity": "ವ್ಯಕ್ತಿನಿಷ್ಠತೆ:",
+  "report.tfDiversity": "ಶಬ್ದಕೋಶದ ವೈವಿಧ್ಯತೆ (TTR):",
+  "report.tfErrorTitle": "⚠️ ಪಠ್ಯ ವಿಧಿವಿಜ್ಞಾನ ದೋಷ",
+  "report.feedbackPrompt": "ಈ ವಿಶ್ಲೇಷಣೆ ಸಹಾಯಕವಾಗಿತ್ತೇ?",
+  "report.feedbackHelpful": "ಸಹಾಯಕವಾಗಿದೆ",
+  "report.feedbackNotHelpful": "ಸಹಾಯಕವಾಗಿಲ್ಲ",
+  "report.feedbackCopy": "ಸಾರಾಂಶವನ್ನು ನಕಲಿಸಿ",
+  "report.feedbackReport": "ಅಧಿಕಾರಿಗಳಿಗೆ ವರದಿ ಮಾಡಿ",
+  "report.learnMore": "ಇನ್ನಷ್ಟು ತಿಳಿಯಿರಿ",
+  "report.verificationResources": "ಪರಿಶೀಲನಾ ಸಂಪನ್ಮೂಲಗಳು:",
+  "report.shareTextPrefix": "ದರ್ಪಣ್ AI ವಿಶ್ಲೇಷಣೆ:",
+  "report.shareTextScore": "ಸ್ಕೋರ್",
+  "report.shareTextSummary": "ಸಾರಾಂಶ",
+  "report.mailSubject": "ಸಂಭಾವ್ಯ ತಪ್ಪು ಮಾಹಿತಿಯ ವರದಿ - ಕೇಸ್ ಐಡಿ: {{caseId}}",
+  "report.mailBody": "ಸೈಬರ್ ಕ್ರೈಮ್ ಸೆಲ್,\n\nಸಂಭಾವ್ಯ ತಪ್ಪು ಮಾಹಿತಿಯ ಕುರಿತು ಪರಿಶೀಲನೆಗಾಗಿ ದಯವಿಟ್ಟು ಲಗತ್ತಿಸಲಾದ ದರ್ಪಣ್ ವಿಶ್ಲೇಷಣೆ ವರದಿಯನ್ನು (ಕೇಸ್ ಐಡಿ: {{caseId}}) ಹುಡುಕಿ.\n\nಟ್ರಸ್ಟ್ ಸ್ಕೋರ್: {{score}}/100\nಸಾರಾಂಶ: {{summary}}\n\nಧನ್ಯವಾದಗಳು.",
+  
+  // -- PDF Report Keys --
+  "pdf.section.caseDetails": "ಪ್ರಕರಣದ ವಿವರಗಳು",
+  "pdf.caseId": "ಕೇಸ್ ಐಡಿ:",
+  "pdf.fileName": "ಫೈಲ್ ಹೆಸರು:",
+  "pdf.sha256": "SHA-256:",
+  "pdf.generated": "ರಚಿಸಲಾಗಿದೆ:",
+  "pdf.textInput": "ಪಠ್ಯ ಇನ್‌ಪುಟ್",
+  "pdf.section.aiSummary": "AI ವಿಶ್ಲೇಷಣೆ ಸಾರಾಂಶ (ಜೆಮினி)",
+  "pdf.section.contextMedia": "C.O.N.T.E.X.T. ವಿಶ್ಲೇಷಣೆ ಅಂಶಗಳು (ಮಾಧ್ಯಮ)",
+  "pdf.section.contextText": "C.O.N.T.E.X.T. ವಿಶ್ಲೇಷಣೆ ಅಂಶಗಳು (ಪಠ್ಯ)",
+  "pdf.section.textForensics": "ಪಠ್ಯ ವಿಧಿವಿಜ್ಞಾನ ಸಾರಾಂಶ",
+  "pdf.tfAiLikelihood": "AI ಸಂಭವನೀಯತೆ (ಹ್ಯೂರಿಸ್ಟಿಕ್):",
+  "pdf.tfReadability": "ಓದುವಿಕೆ (ಫ್ಲೆಶ್):",
+  "pdf.tfSentiment": "ಭಾವನೆ ಧ್ರುವೀಯತೆ:",
+  "pdf.tfSubjectivity": "ವ್ಯಕ್ತಿನಿಷ್ಠತೆ:",
+  "pdf.tfDiversity": "ಶಬ್ದಕೋಶದ ವೈವಿಧ್ಯತೆ (TTR):",
+  "pdf.tfBurstiness": "ಬರ್ಸ್ಟಿನೆಸ್ (ವ್ಯತ್ಯಯ ಹ್ಯೂರಿಸ್ಟಿಕ್):",
+  "pdf.tfRepetition": "ಪುನರಾವರ್ತನೆ (ಟ್ರೈಗ್ರಾಮ್ ಅನುಪಾತ):",
+  "pdf.tfErrorPrefix": "ಪಠ್ಯ ವಿಧಿವಿಜ್ಞಾನ ದೋಷ",
+  "pdf.section.detailedForensics": "ವಿವರವಾದ ವಿಧಿವಿಜ್ಞಾನ ಸಂಶೋಧನೆಗಳು",
+  "pdf.forensicErrorPrefix": "ವಿಧಿವಿಜ್ಞಾನ ಸೇವಾ ದೋಷ",
+  "pdf.forensicErrorDetails": "ವಿವರಗಳು",
+  "pdf.noDetails": "ಯಾವುದೇ ವಿವರಗಳಿಲ್ಲ.",
+  "pdf.subSection.scatter": "ಸ್ಕ್ಯಾಟರ್ ವಿಶ್ಲೇಷಣೆ",
+  "pdf.scatterSynthLikelihood": "ಸಂಶ್ಲೇಷಿತ ಸಂಭವನೀಯತೆ:",
+  "pdf.scatterEntropies": "ಎಂಟ್ರೊಪಿಗಳು (R/G/B):",
+  "pdf.scatterCorrelations": "ಸಹಸಂಬಂಧಗಳು (RG/RB/GB):",
+  "pdf.section.appendix": "ಅನುಬಂಧ: ಕಚ್ಚಾ ವಿಧಿವಿಜ್ಞಾನ ಡೇಟಾ",
+  "pdf.subSection.metadata": "ಮೆಟಾಡೇಟಾ (ExifTool)",
+  "pdf.subSection.binary": "ಬೈನರಿ ರಚನೆ (Binwalk)",
+  "pdf.subSection.stego": "ಸ್ಟೆಗನೋಗ್ರಫಿ (Steghide)",
+  "pdf.noExif": "ExifTool ಡೇಟಾ ಕಂಡುಬಂದಿಲ್ಲ.",
+  "pdf.noBinwalk": "Binwalk ಡೇಟಾ ಕಂಡುಬಂದಿಲ್ಲ.",
+  "pdf.noStego": "Steghide ಡೇಟಾ ಕಂಡುಬಂದಿಲ್ಲ.",
+  "pdf.noForensicData": "ವರದಿಯ ಪೇಲೋಡ್‌ನಲ್ಲಿ ಯಾವುದೇ ವಿವರವಾದ ವಿಧಿವಿಜ್ಞಾನ ಡೇಟಾ ಕಂಡುಬಂದಿಲ್ಲ.",
+  "pdf.section.digitalProvenance": "ಡಿಜಿಟಲ್ ಪ್ರೊವೆನಾನ್ಸ್",
+  "pdf.subSection.webOrigin": "ವೆಬ್ ಮೂಲ (ರಿವರ್ಸ್ ಹುಡುಕಾಟ)",
+  "pdf.prov.software": "ಸಂಪಾದನೆ ಸಾಫ್ಟ್‌ವೇರ್:",
+  "pdf.prov.make": "ಸಾಧನ ತಯಾರಿಕೆ:",
+  "pdf.prov.model": "ಸಾಧನ ಮಾದರಿ:",
+  "pdf.prov.suspicious": "ಸಂಶಯಾಸ್ಪದ ಟ್ಯಾಗ್‌ಗಳು:",
+  "pdf.noneDetected": "ಯಾವುದೂ ಪತ್ತೆಯಾಗಿಲ್ಲ.",
+  "pdf.noExif": "ಓದಬಲ್ಲ EXIF ​​ಮೆಟಾಡೇಟಾ ಕಂಡುಬಂದಿಲ್ಲ.",
+  "pdf.prov.bestGuess": "ಅತ್ಯುತ್ತಮ ಅಂದಾಜು ಲೇಬಲ್:",
+  "pdf.noGuess": "ಯಾವುದೇ ಅಂದಾಜು ಲಭ್ಯವಿಲ್ಲ.",
+  "pdf.prov.firstSeen": "ಮೊದಲು ಇಲ್ಲಿ ನೋಡಲಾಗಿದೆ:",
+  "pdf.notFound": "ಯಾವುದೇ ಸ್ಪಷ್ಟ ಮೂಲ ಕಂಡುಬಂದಿಲ್ಲ.",
+  "pdf.prov.matchingPages": "ಹೊಂದಾಣಿಕೆಯಾಗುವ ಪುಟಗಳು:",
+  "pdf.noMatchingPages": "ಬೇರೆ ಯಾವುದೇ ಪುಟಗಳು ಕಂಡುಬಂದಿಲ್ಲ.",
+  
+  // -- Learn More Dialog --
+  "learnMore": {
+    "title": "ಆಳವಾದ ಪ್ರೊವೆನಾನ್ಸ್ ವರದಿ",
+    "description": "ಮಾಧ್ಯಮದ ಡಿಜಿಟಲ್ ಇತಿಹಾಸ ಮತ್ತು ಮೆಟಾಡೇಟಾದ ವಿವರವಾದ ವಿಶ್ಲೇಷಣೆ.",
+    "webOriginTitle": "ವೆಬ್ ಮೂಲ (ರಿವರ್ಸ್ ಇಮೇಜ್ ಹುಡುಕಾಟ)",
+    "bestGuess": "ಅತ್ಯುತ್ತಮ ಅಂದಾಜು ಲೇಬಲ್",
+    "firstSeen": "ಮೊದಲು ಇಲ್ಲಿ ನೋಡಲಾಗಿದೆ (ಹಳೆಯ ತಿಳಿದಿರುವ ಮೂಲ)",
+    "notFound": "ಯಾವುದೇ ಸ್ಪಷ್ಟ ಮೂಲ ಕಂಡುಬಂದಿಲ್ಲ.",
+    "matchingPages": "ಈ ಚಿತ್ರವನ್ನು ಬಳಸುವ ಇತರ ಪುಟಗಳು",
+    "noMatches": "ಈ ಚಿತ್ರವನ್ನು ಬಳಸುವ ಬೇರೆ ಯಾವುದೇ ಪುಟಗಳು ಕಂಡುಬಂದಿಲ್ಲ.",
+    "metadataTitle": "ಚಿತ್ರ ಮೆಟಾಡೇಟಾ (EXIF)",
+    "suspiciousTags": "ಸಂಶಯಾಸ್ಪದ ಸಾಫ್ಟ್‌ವೇರ್ ಟ್ಯಾಗ್‌ಗಳು",
+    "noneFound": "ಯಾವುದೂ ಪತ್ತೆಯಾಗಿಲ್ಲ",
+    "allTags": "ಎಲ್ಲಾ ಕಚ್ಚಾ ಮೆಟಾಡೇಟಾ",
+    "noMetadata": "ಈ ಫೈಲ್‌ನಲ್ಲಿ ಯಾವುದೇ ಮೆಟಾಡೇಟಾ (EXIF) ಕಂಡುಬಂದಿಲ್ಲ. ಇದು ಸಾಮಾಜಿಕ ಮಾಧ್ಯಮದ ಚಿತ್ರಗಳಲ್ಲಿ ಸಾಮಾನ್ಯವಾಗಿದೆ, ಏಕೆಂದರೆ ಅವುಗಳು ಸಾಮಾನ್ಯವಾಗಿ ಈ ಡೇಟಾವನ್ನು ತೆಗೆದುಹಾಕುತ್ತವೆ."
+  },
+
+  // -- Toasts & Errors --
+  "toast.fileTooLarge": "ಫೈಲ್ ತುಂಬಾ ದೊಡ್ಡದಾಗಿದೆ",
+  "toast.fileTooLargeDesc": "ದಯವಿಟ್ಟು 10MB ಗಿಂತ ಚಿಕ್ಕದಾದ ಫೈಲ್ ಆಯ್ಕೆಮಾಡಿ.",
+  "chat.attachImage": "ಚಿತ್ರವನ್ನು ಲಗತ್ತಿಸಿ",
+  "toast.micNotSupported": "ಮೈಕ್ ಬೆಂಬಲಿತವಾಗಿಲ್ಲ",
+  "toast.micNotSupportedDesc": "ನಿಮ್ಮ ಬ್ರೌಸರ್ ಸ್ಪೀಚ್ ರೆಕಗ್ನಿಷನ್ ಅನ್ನು ಬೆಂಬಲಿಸುವುದಿಲ್ಲ.",
+  "toast.listening": "ಕೇಳಲಾಗುತ್ತಿದೆ...",
+  "toast.micListeningDesc": "ಈಗ ಮಾತನಾಡಿ, ನಿಲ್ಲಿಸಲು ಮೈಕ್ ಕ್ಲಿಕ್ ಮಾಡಿ.",
+  "toast.micError": "ಮೈಕ್ ದೋಷ",
+  "toast.micErrorDesc": "ಸ್ಪೀಚ್ ರೆಕಗ್ನಿಷನ್ ವಿಫಲವಾಗಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+  "toast.saveHistoryFail": "ಇತಿಹಾಸವನ್ನು ಉಳಿಸಲು ವಿಫಲವಾಗಿದೆ",
+  "toast.loadedHistory": "ಇತಿಹಾಸದಿಂದ ಲೋಡ್ ಮಾಡಲಾಗಿದೆ",
+  "toast.loadedHistoryDesc": "{{time}} ರಿಂದ ವರದಿಯನ್ನು ಪ್ರದರ್ಶಿಸಲಾಗುತ್ತಿದೆ",
+  "toast.analysisComplete": "ವಿಶ್ಲೇಷಣೆ ಪೂರ್ಣಗೊಂಡಿದೆ",
+  "toast.analysisCompleteDesc": "ಟ್ರಸ್ಟ್ ಸ್ಕೋರ್: {{score}}/100",
+  "toast.analysisFailed": "ವಿಶ್ಲೇಷಣೆ ವಿಫಲವಾಗಿದೆ",
+  "toast.sessionReset": "ಸೆಷನ್ ಮರುಹೊಂದಿಸಲಾಗಿದೆ",
+  "toast.sessionResetDesc": "ವಿಶ್ಲೇಷಣೆ ಮತ್ತು ಇತಿಹಾಸವನ್ನು ತೆರವುಗೊಳಿಸಲಾಗಿದೆ.",
+  "toast.noReportSelected": "ಯಾವುದೇ ವರದಿಯನ್ನು ಆಯ್ಕೆ ಮಾಡಲಾಗಿಲ್ಲ",
+  "toast.noReportSelectedDesc": "ವಿಶ್ಲೇಷಣೆಯನ್ನು ರನ್ ಮಾಡಿ ಅಥವಾ ಇತಿಹಾಸದಿಂದ ಒಂದನ್ನು ಆಯ್ಕೆಮಾಡಿ.",
+  "toast.generatingPdf": "PDF ವರದಿಯನ್ನು ರಚಿಸಲಾಗುತ್ತಿದೆ...",
+  "toast.pleaseWait": "ದಯವಿಟ್ಟು ನಿರೀಕ್ಷಿಸಿ...",
+  "toast.pdfExported": "PDF ವರದಿಯನ್ನು ರಫ್ತು ಮಾಡಲಾಗಿದೆ",
+  "toast.pdfExportedDesc": "ವರದಿಯನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಉಳಿಸಲಾಗಿದೆ.",
+  "toast.exportFailed": "ರಫ್ತು ವಿಫಲವಾಗಿದೆ",
+  "toast.exportFailedDesc": "PDF ರಚಿಸುವಾಗ ದೋಷ ಸಂಭವಿಸಿದೆ.",
+  "toast.languageChanged": "ಭಾಷೆ ಬದಲಾಗಿದೆ",
+  "toast.languageChangedDesc": "ಇಂಟರ್ಫೇಸ್ ಭಾಷೆಯನ್ನು {{lng}} ಗೆ ಹೊಂದಿಸಲಾಗಿದೆ",
+  "toast.speechNotAvailable": "ಮಾತು ಲಭ್ಯವಿಲ್ಲ",
+  "toast.speechError": "ಮಾತು ದೋಷ",
+  "toast.feedbackSubmitted": "ಪ್ರತಿಕ್ರಿಯೆ ಸಲ್ಲಿಸಲಾಗಿದೆ",
+  "toast.feedbackDesc": "ದರ್ಪಣ್ AI ಅನ್ನು ಸುಧಾರಿಸಲು ಸಹಾಯ ಮಾಡಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು!",
+  "toast.copied": "ಕ್ಲಿಪ್‌ಬೋರ್ಡ್‌ಗೆ ನಕಲಿಸಲಾಗಿದೆ",
+  "toast.copyFailed": "ನಕಲಿಸಲು ವಿಫಲವಾಗಿದೆ",
+  "toast.reportSubmitted": "ವಿಷಯವನ್ನು ವರದಿ ಮಾಡಲಾಗಿದೆ",
+  "toast.reportDesc": "ನಿಮ್ಮ ವರದಿಯನ್ನು ಪರಿಶೀಲನೆಗಾಗಿ ಸಲ್ಲಿಸಲಾಗಿದೆ.",
+  "toast.reportFailed": "ವರದಿ ಸಲ್ಲಿಕೆ ವಿಫಲವಾಗಿದೆ",
+  "error.invalidReport": "ಸರ್ವರ್‌ನಿಂದ ಅಮಾನ್ಯ ವರದಿ ಸ್ವರೂಪವನ್ನು ಸ್ವೀಕರಿಸಲಾಗಿದೆ.",
+  "error.unknown": "ಅಜ್ಞಾತ ದೋಷ ಸಂಭವಿಸಿದೆ.",
+  "error.analysisFailedPrefix": "ವಿಶ್ಲೇಷಣೆ ವಿಫಲವಾಗಿದೆ"
+};
+
+
+// The translations
+const resources = {
+  en: {
+    translation: enTranslation
+  },
+  hi: {
+    translation: hiTranslation
+  },
+  ta: {
+    translation: taTranslation
+  },
+  bn: {
+    translation: bnTranslation
+  },
+  mr: {
+    translation: mrTranslation
+  },
+  kn: {
+    translation: knTranslation
+  }
+};
+
+i18n
+  .use(LanguageDetector) // Detects user language
+  .use(initReactI18next) // Passes i18n down to react-i18next
+  .init({
+    resources,
+    fallbackLng: 'en', // Use English if detected language not available
+    debug: false, // Set to false in production
+    interpolation: {
+      escapeValue: false // React already safes from XSS
+    }
+  });
+
+export default i18n;
