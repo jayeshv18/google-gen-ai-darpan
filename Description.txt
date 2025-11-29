@@ -1,0 +1,59 @@
+Darpan: The AI-Powered Truth Compass
+Verify. Analyze. Trust.
+Darpan (Sanskrit for "Mirror") is an advanced, multimodal misinformation detection platform designed to combat the rising tide of deepfakes and AI-generated fake news. Unlike binary "Real/Fake" detectors, Darpan acts as a forensic companion, providing users with a detailed, evidence-backed analysis of text claims and media files in real-time.
+
+The Problem
+- The democratization of Generative AI has weaponized information.
+- Deepfakes are becoming indistinguishable from reality (e.g., the "Balenciaga Pope").
+- Fake News spreads 6x faster than truth on social media.
+- Language Barriers prevent non-English speakers from accessing verifying tools.
+- Lack of Explainability: Existing tools give a score but don't explain why content is fake.
+
+The Solution
+- Darpan is a holistic forensic engine that combines neural networks, traditional digital forensics, and Large Language Models (LLMs) to triangulate the truth. It doesn't just guess; it investigates.
+
+Key Features
+  1. Multimodal Analysis
+  - Text Analysis (C.O.N.T.E.X.T. Framework): Analyzes claims using 6 pillars: Source Credibility, Fact-Checking, Language Analysis, Bias Detection, Evidence Quality, and Contextual Accuracy.
+  - Media Forensics (9-Factor Audit): Deconstructs images using Visual Consistency, Object Integrity, Metadata Analysis, Shadow/Lighting Physics, and ML Artifact Detection.
+  
+  2. Advanced Forensic Tools (Under the Hood)
+  - Custom ML Artifact Detector: A fine-tuned EfficientNetB0 TensorFlow model trained to spot invisible pixel-level artifacts left by GANs and Diffusion models.
+  - Spectral Analysis (FFT): Generates Fast Fourier Transform (FFT) scatter plots to detect frequency anomalies common in AI-generated images.
+  - Digital Provenance: Utilizes Google Vision API for reverse image searching to find the "Patient Zero" (first appearance) of an image.
+  - Metadata Extraction: Uses ExifTool to hunt for "Photoshop" or "Midjourney" tags often left in file headers.
+  
+  3. Hyper-Local & Accessible
+  - Multilingual Support: Full interface and report translation for English, Hindi, Tamil, Bengali, Marathi, and Kannada.
+  - Voice-First Interface: Includes Speech-to-Text (Input) and Text-to-Speech (Report reading) for accessibility.
+  
+  4. Professional Reporting
+  - Trusted Compass Report: Generates a downloadable, legally-structured PDF report containing case IDs, SHA-256 hashes, scatter plot visualizations, and detailed findings in the user's native language.
+  - Secure Ledger: Every analysis is hashed (SHA-256) and logged in Firestore to create an immutable audit trail.
+
+Technical Architecture (The "Full Journey")
+Input: User uploads content via the React (Vite + Tailwind) frontend hosted on Firebase.
+Routing: A Flask/FastAPI Gateway on Google Cloud Run routes the request.
+Parallel Processing (The Engine):
+ - Pipeline A (RAG): Fetches context using Google Search & Vertex AI Vector Search.
+ - Pipeline B (ML): Runs the TensorFow Artifact Model.
+ - Pipeline C (Forensics): A specialized microservice runs binwalk, steghide, and scatter_analysis (FFT).
+ - Pipeline D (Vision): Checks web entities and labels via Google Vision API.
+
+Synthesis: Gemini 2.5 Flash acts as the Lead Analyst. It consumes the raw JSON evidence from all pipelines and synthesizes a human-readable "Trusted Compass Report."
+Localization: The report is passed through Google Cloud Translation API.
+Delivery: The final JSON is sent to the frontend, rendered, and made available for PDF export.
+
+Tech Stack
+- Frontend: React.js, TypeScript, Tailwind CSS, Shadcn/UI, Lucide Icons, jsPDF (with custom font injection).
+- Backend: Python, Flask, FastAPI.
+- Cloud Infrastructure: Google Cloud Platform (Cloud Run, Cloud Storage, Vertex AI, Firestore).
+
+AI Models:
+- LLM: Gemini 2.5 Flash (via Vertex AI).
+- Vision: EfficientNetB0 (Keras/TensorFlow) & Google Vision API.
+- Translation: Google Cloud Translation API.
+- Forensic Libraries: cv2 (OpenCV), numpy (for FFT), matplotlib (Scatter plots), exifread.
+
+Impact
+Darpan moves beyond simple "fact-checking." By providing forensic evidence (like spectral scatter plots and metadata traces) alongside AI reasoning, it empowers users—journalists, students, and the general public—to critically evaluate the media they consume, regardless of their technical expertise or language.
